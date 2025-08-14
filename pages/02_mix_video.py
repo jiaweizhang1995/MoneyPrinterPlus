@@ -107,7 +107,7 @@ common_ui()
 
 st.markdown(f"<h1 style='text-align: center; font-weight:bold; font-family:comic sans ms; padding-top: 0rem;'> \
             {app_title}</h1>", unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center;padding-top: 0rem;'>视频批量混剪工具</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;padding-top: 0rem;'>By 阿城</h2>", unsafe_allow_html=True)
 
 # 场景设置
 mix_video_container = st.container(border=True)
