@@ -46,6 +46,10 @@ default_chattts_dir = os.path.abspath(default_chattts_dir)
 
 load_session_state_from_yaml('02_first_visit')
 
+if 'scene_number' not in st.session_state or st.session_state.get('scene_number', 0) == 0:
+    st.session_state['scene_number'] = 4
+    save_session_state_to_yaml()
+
 
 def try_test_audio():
     main_try_test_audio()

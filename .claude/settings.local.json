@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(del \"E:\\PycharmProjects\\MoneyPrinterPlus\\config\\session.yml\")",
+      "Bash(rm:*)"
     ],
     "deny": []
   }
