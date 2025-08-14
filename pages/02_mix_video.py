@@ -27,7 +27,7 @@ import streamlit as st
 
 from config.config import transition_types, fade_list, audio_languages, audio_types, load_session_state_from_yaml, \
     save_session_state_to_yaml, app_title, GPT_soVITS_languages, CosyVoice_voice, my_config
-from main import main_generate_ai_video_for_mix, main_try_test_audio, get_audio_voices, main_try_test_local_audio
+from main import main_generate_ai_video_for_mix, main_try_test_audio, get_audio_voices, main_try_test_local_audio, main_try_test_fishaudio
 from pages.common import common_ui
 from tools.tr_utils import tr
 from tools.utils import get_file_map_from_dir
@@ -57,6 +57,10 @@ def try_test_audio():
 
 def try_test_local_audio():
     main_try_test_local_audio()
+
+
+def try_test_fishaudio():
+    main_try_test_fishaudio()
 
 
 def delete_scene_for_mix(video_scene_container):
@@ -126,148 +130,50 @@ with mix_video_container:
         st.button(label=tr("Delete Extra Scene"), type="primary", on_click=delete_scene_for_mix,
                   args=(video_scene_container,))
 
-# 配音区域
+# FishAudio 配音区域
 captioning_container = st.container(border=True)
 with captioning_container:
     # 配音
-    st.subheader(tr("Video Captioning"))
-
-    llm_columns = st.columns(4)
+    st.subheader(tr("Video Captioning") + " - Fish Audio")
+    
+    # FishAudio 配置
+    st.info("🐟 使用 Fish Audio 高质量语音合成服务，基于ALLE模型")
+    
+    llm_columns = st.columns(3)
     with llm_columns[0]:
-        st.selectbox(label=tr("Choose audio type"), options=audio_types, format_func=lambda x: audio_types.get(x),
-                     key="audio_type")
-
-    if st.session_state.get("audio_type") == "remote":
-        llm_columns = st.columns(4)
-        audio_voice = get_audio_voices()
-        with llm_columns[0]:
-            st.selectbox(label=tr("Audio language"), options=audio_languages,
-                         format_func=lambda x: audio_languages.get(x), key="audio_language")
-        with llm_columns[1]:
-            st.selectbox(label=tr("Audio voice"),
-                         options=audio_voice.get(st.session_state.get("audio_language")),
-                         format_func=lambda x: audio_voice.get(st.session_state.get("audio_language")).get(x),
-                         key="audio_voice")
-        with llm_columns[2]:
-            st.selectbox(label=tr("Audio speed"),
-                         options=["normal", "fast", "faster", "fastest", "slow", "slower", "slowest"],
-                         key="audio_speed")
-        with llm_columns[3]:
-            st.button(label=tr("Testing Audio"), type="primary", on_click=try_test_audio)
-    if st.session_state.get("audio_type") == "local":
-        selected_local_audio_tts_provider = my_config['audio'].get('local_tts', {}).get('provider', '')
-        if not selected_local_audio_tts_provider:
-            selected_local_audio_tts_provider = 'chatTTS'
-        if selected_local_audio_tts_provider == 'chatTTS':
-            llm_columns = st.columns(5)
-            with llm_columns[0]:
-                st.checkbox(label=tr("Refine text"), key="refine_text")
-                st.text_input(label=tr("Refine text Prompt"), placeholder=tr("[oral_2][laugh_0][break_6]"),
-                              key="refine_text_prompt")
-            with llm_columns[1]:
-                st.slider(label=tr("Text Seed"), min_value=1, value=20, max_value=4294967295, step=1,
-                          key="text_seed")
-            with llm_columns[2]:
-                st.slider(label=tr("Audio Temperature"), min_value=0.01, value=0.3, max_value=1.0, step=0.01,
-                          key="audio_temperature")
-            with llm_columns[3]:
-                st.slider(label=tr("top_P"), min_value=0.1, value=0.7, max_value=0.9, step=0.1,
-                          key="audio_top_p")
-            with llm_columns[4]:
-                st.slider(label=tr("top_K"), min_value=1, value=20, max_value=20, step=1,
-                          key="audio_top_k")
-
-            st.checkbox(label=tr("Use random voice"), key="use_random_voice")
-
-            if st.session_state.get("use_random_voice"):
-                llm_columns = st.columns(4)
-                with llm_columns[0]:
-                    st.slider(label=tr("Audio Seed"), min_value=1, value=20, max_value=4294967295, step=1,
-                              key="audio_seed")
-                with llm_columns[1]:
-                    st.selectbox(label=tr("Audio speed"),
-                                 options=["normal", "fast", "faster", "fastest", "slow", "slower", "slowest"],
-                                 key="audio_speed")
-                with llm_columns[2]:
-                    st.button(label=tr("Testing Audio"), type="primary", on_click=try_test_local_audio)
-            else:
-                llm_columns = st.columns(4)
-                with llm_columns[0]:
-                    st.text_input(label=tr("Local Chattts Dir"), placeholder=tr("Input Local Chattts Dir"),
-                                  value=default_chattts_dir,
-                                  key="default_chattts_dir")
-                with llm_columns[1]:
-                    chattts_list = get_file_map_from_dir(st.session_state["default_chattts_dir"], ".pt,.txt")
-                    st.selectbox(label=tr("Audio voice"), key="audio_voice",
-                                 options=chattts_list, format_func=lambda x: chattts_list[x])
-                with llm_columns[2]:
-                    st.selectbox(label=tr("Audio speed"),
-                                 options=["normal", "fast", "faster", "fastest", "slow", "slower", "slowest"],
-                                 key="audio_speed")
-                with llm_columns[3]:
-                    st.button(label=tr("Testing Audio"), type="primary", on_click=try_test_local_audio)
-        if selected_local_audio_tts_provider == 'GPTSoVITS':
-            use_reference_audio = st.checkbox(label=tr("Use reference audio"), key="use_reference_audio")
-            if use_reference_audio:
-                llm_columns = st.columns(4)
-                with llm_columns[0]:
-                    st.file_uploader(label=tr("Reference Audio"), type=["wav", "mp3"], accept_multiple_files=False,
-                                     key="reference_audio")
-                with llm_columns[1]:
-                    st.text_area(label=tr("Reference Audio Text"), placeholder=tr("Input Reference Audio Text"),
-                                 key="reference_audio_text")
-                with llm_columns[2]:
-                    st.selectbox(label=tr("Reference Audio language"), options=GPT_soVITS_languages,
-                                 format_func=lambda x: GPT_soVITS_languages.get(x),
-                                 key="reference_audio_language")
-            llm_columns = st.columns(6)
-            with llm_columns[0]:
-                st.slider(label=tr("Audio Temperature"), min_value=0.01, value=0.3, max_value=1.0, step=0.01,
-                          key="audio_temperature")
-            with llm_columns[1]:
-                st.slider(label=tr("top_P"), min_value=0.1, value=0.7, max_value=0.9, step=0.1,
-                          key="audio_top_p")
-            with llm_columns[2]:
-                st.slider(label=tr("top_K"), min_value=1, value=20, max_value=20, step=1,
-                          key="audio_top_k")
-            with llm_columns[3]:
-                st.selectbox(label=tr("Audio speed"),
-                             options=["normal", "fast", "faster", "fastest", "slow", "slower", "slowest"],
-                             key="audio_speed")
-            with llm_columns[4]:
-                st.selectbox(label=tr("Inference Audio language"),
-                             options=GPT_soVITS_languages, format_func=lambda x: GPT_soVITS_languages.get(x),
-                             key="inference_audio_language")
-            with llm_columns[5]:
-                st.button(label=tr("Testing Audio"), type="primary", on_click=try_test_local_audio)
-
-        if selected_local_audio_tts_provider == 'CosyVoice':
-            use_reference_audio = st.checkbox(label=tr("Use reference audio"), key="use_reference_audio")
-            if use_reference_audio:
-                llm_columns = st.columns(2)
-                with llm_columns[0]:
-                    # st.file_uploader(label=tr("Reference Audio"), type=["wav", "mp3"], accept_multiple_files=False,
-                    #                  key="reference_audio")
-                    st.text_input(label=tr("Reference Audio"), placeholder=tr("Input Reference Audio File Path"),
-                      key="reference_audio_file_path")
-                with llm_columns[1]:
-                    st.text_area(label=tr("Reference Audio Text"), placeholder=tr("Input Reference Audio Text"),
-                                 key="reference_audio_text")
-            else:
-                llm_columns = st.columns(1)
-                st.selectbox(label=tr("Reference Audio language"), options=CosyVoice_voice,
-                            format_func=lambda x: CosyVoice_voice.get(x),
-                            key="reference_audio_language")
-            llm_columns = st.columns(3)
-            with llm_columns[0]:
-                st.slider(label=tr("Text Seed"), min_value=1, value=20, max_value=4294967295, step=1,
-                          key="text_seed")
-            with llm_columns[1]:
-                st.selectbox(label=tr("Audio speed"),
-                             options=["normal", "fast", "faster", "fastest", "slow", "slower", "slowest"],
-                             key="audio_speed")
-            with llm_columns[2]:
-                st.button(label=tr("Testing Audio"), type="primary", on_click=try_test_local_audio)
+        # 音频温度参数
+        st.slider(
+            label="音频温度 (Temperature)", 
+            min_value=0.1, 
+            max_value=1.0, 
+            value=0.7, 
+            step=0.1,
+            key="fishaudio_temperature",
+            help="控制语音的随机性，较低值更稳定，较高值更多样化"
+        )
+    
+    with llm_columns[1]:
+        # 音频格式选择
+        st.selectbox(
+            label="音频格式",
+            options=["mp3", "wav"],
+            index=0,
+            key="fishaudio_format",
+            help="选择输出音频格式"
+        )
+    
+    with llm_columns[2]:
+        # 测试按钮
+        st.button(
+            label="🎵 测试 Fish Audio", 
+            type="primary", 
+            on_click=try_test_fishaudio,
+            help="测试Fish Audio语音合成效果"
+        )
+    
+    # 模型信息
+    st.caption("🔧 当前使用模型: ALLE (高质量多语言TTS模型)")
+    st.caption("📝 支持从文案文件随机选取文本进行语音合成")
 
 recognition_container = st.container(border=True)
 with recognition_container:

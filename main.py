@@ -32,6 +32,7 @@ from services.audio.chattts_service import ChatTTSAudioService
 from services.audio.gptsovits_service import GPTSoVITSAudioService
 from services.audio.cosyvoice_service import CosyVoiceAudioService
 from services.audio.tencent_tts_service import TencentAudioService
+from services.audio.fishaudio_service import FishAudioService
 from services.captioning.captioning_service import generate_caption, add_subtitles
 from services.hunjian.hunjian_service import concat_audio_list, get_audio_and_video_list, get_audio_and_video_list_local
 from services.llm.azure_service import MyAzureService
@@ -129,6 +130,13 @@ def main_try_test_local_audio():
     audio_service.read_with_content(video_content)
 
 
+def main_try_test_fishaudio():
+    print("main_try_test_fishaudio begin")
+    audio_service = FishAudioService()
+    test_text = "你好，这是Fish Audio语音合成测试，欢迎使用MoneyPrinterPlus工具。"
+    audio_service.test_audio_generation(test_text)
+
+
 def main_try_test_audio():
     print("main_try_test_audio begin")
     audio_service = get_audio_service()
@@ -185,22 +193,12 @@ def main_generate_video_dubbing():
 
 def main_generate_video_dubbing_for_mix():
     print("main_generate_video_dubbing_for_mix begin")
-    if st.session_state.get("audio_type") == "remote":
-        print("use remote audio")
-        audio_service = get_audio_service()
-        audio_rate = get_audio_rate()
-        audio_output_file_list, video_dir_list = get_audio_and_video_list(audio_service, audio_rate)
-    else:
-        print("use local audio")
-        selected_local_audio_tts_provider = my_config['audio'].get('local_tts', {}).get('provider', '')
-        audio_service = None
-        if selected_local_audio_tts_provider == "chatTTS":
-            audio_service = ChatTTSAudioService()
-        if selected_local_audio_tts_provider == "GPTSoVITS":
-            audio_service = GPTSoVITSAudioService()
-        if selected_local_audio_tts_provider == "CosyVoice":
-            audio_service = CosyVoiceAudioService()
-        audio_output_file_list, video_dir_list = get_audio_and_video_list_local(audio_service)
+    
+    # 统一使用FishAudio服务
+    print("use FishAudio service")
+    audio_service = FishAudioService()
+    audio_output_file_list, video_dir_list = get_audio_and_video_list_local(audio_service)
+    
     st.session_state["audio_output_file_list"] = audio_output_file_list
     st.session_state["video_dir_list"] = video_dir_list
     print("main_generate_video_dubbing_for_mix end")
