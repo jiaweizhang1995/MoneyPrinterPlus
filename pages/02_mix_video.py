@@ -333,6 +333,101 @@ with subtitle_container:
         st.slider(label=tr("subtitle border width"), min_value=0, value=0, max_value=4, step=1,
                   key="subtitle_border_width")
 
+# 花式文本叠加
+fancy_text_container = st.container(border=True)
+with fancy_text_container:
+    st.subheader("✨ 花式文本叠加")
+    
+    # 导入花式文本服务用于预览
+    try:
+        from services.video.fancy_text_service import FancyTextService
+        fancy_service = FancyTextService()
+        config_loaded = True
+    except Exception as e:
+        st.error(f"加载花式文本服务失败: {e}")
+        config_loaded = False
+    
+    if config_loaded:
+        # 第一行：基础控制
+        fancy_columns_1 = st.columns(4)
+        with fancy_columns_1[0]:
+            st.checkbox(label="启用花式文本", key="enable_fancy_text", value=False, 
+                       help="在视频中添加产品名称和卖点的花式文本叠加")
+        
+        with fancy_columns_1[1]:
+            st.slider(label="显示频率（秒）", min_value=10, value=25, max_value=60, step=5,
+                     key="fancy_text_frequency", help="每隔多少秒显示一次文本")
+        
+        with fancy_columns_1[2]:
+            st.slider(label="显示时长（秒）", min_value=2, value=4, max_value=8, step=1,
+                     key="fancy_text_duration", help="每次显示文本的持续时间")
+        
+        with fancy_columns_1[3]:
+            position_options = {"top_center": "顶部居中", "top_left": "顶部左侧", 
+                              "center": "屏幕中央", "bottom_center": "底部居中"}
+            st.selectbox(label="显示位置", key="fancy_text_position", 
+                        options=position_options, format_func=lambda x: position_options[x],
+                        help="选择文本在视频中的显示位置")
+        
+        # 第二行：样式控制
+        if st.session_state.get("enable_fancy_text", False):
+            fancy_columns_2 = st.columns(3)
+            with fancy_columns_2[0]:
+                content_options = {"phrases": "产品短语", "advantages": "产品优势", "mixed": "混合显示"}
+                st.selectbox(label="内容类型", key="fancy_text_content_type",
+                           options=content_options, format_func=lambda x: content_options[x],
+                           help="选择显示的文本内容类型")
+            
+            with fancy_columns_2[1]:
+                st.checkbox(label="随机位置", key="fancy_text_random_position", value=True,
+                           help="启用后文本位置会在预设位置中随机选择")
+            
+            with fancy_columns_2[2]:
+                st.checkbox(label="启用动画效果", key="fancy_text_animation", value=True,
+                           help="文本显示时使用淡入淡出等动画效果")
+            
+            # 第三行：字体和颜色设置
+            fancy_columns_3 = st.columns(4)
+            with fancy_columns_3[0]:
+                st.color_picker(label="主标题颜色", key="fancy_text_main_color", value="#FFFFFF",
+                               help="主标题文本的颜色")
+            
+            with fancy_columns_3[1]:
+                st.color_picker(label="副标题颜色", key="fancy_text_sub_color", value="#000000",
+                               help="副标题文本的颜色")
+            
+            with fancy_columns_3[2]:
+                st.color_picker(label="背景颜色", key="fancy_text_bg_color", value="#FFA500",
+                               help="副标题背景框的颜色")
+            
+            with fancy_columns_3[3]:
+                st.checkbox(label="启用文本阴影", key="fancy_text_shadow", value=True,
+                           help="为文本添加阴影效果增强可读性")
+            
+            # 预览区域
+            with st.expander("📱 文本效果预览", expanded=False):
+                preview_col1, preview_col2 = st.columns(2)
+                
+                with preview_col1:
+                    st.markdown("**主标题样式预览:**")
+                    main_preview = fancy_service.preview_text_style('main_title')
+                    sample_main, sample_sub = main_preview.get('sample_text', ('Donbukll', 'wrapping mask'))
+                    
+                    main_color = st.session_state.get('fancy_text_main_color', '#FFFFFF')
+                    st.markdown(f'<p style="font-size: 28px; color: {main_color}; font-style: italic; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">{sample_main}</p>', 
+                               unsafe_allow_html=True)
+                
+                with preview_col2:
+                    st.markdown("**副标题样式预览:**")
+                    sub_color = st.session_state.get('fancy_text_sub_color', '#000000')
+                    bg_color = st.session_state.get('fancy_text_bg_color', '#FFA500')
+                    st.markdown(f'<p style="font-size: 20px; color: {sub_color}; background-color: {bg_color}; padding: 8px 12px; border-radius: 6px; display: inline-block;">{sample_sub}</p>', 
+                               unsafe_allow_html=True)
+                
+                st.info("💡 提示：文本内容会根据配置文件中的产品信息和优势自动随机选择显示")
+    else:
+        st.warning("⚠️ 花式文本服务未正确加载，请检查配置文件")
+
 # 生成视频
 video_generator = st.container(border=True)
 with video_generator:

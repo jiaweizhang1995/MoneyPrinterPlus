@@ -33,9 +33,11 @@ import streamlit as st
 from PIL import Image
 
 from services.video.texiao_service import gen_filter
+from services.video.fancy_text_service import FancyTextService
 from tools.file_utils import generate_temp_filename
 from tools.tr_utils import tr
 from tools.utils import random_with_system_time, run_ffmpeg_command, extent_audio
+from tools.video_naming_utils import generate_daily_video_filename
 
 # 获取当前脚本的绝对路径
 script_path = os.path.abspath(__file__)
@@ -614,8 +616,7 @@ class VideoService:
 
     def generate_video_with_audio(self):
         # 生成视频和音频的代码
-        random_name = str(random_with_system_time())
-        merge_video = os.path.join(video_output_dir, "final-" + random_name + ".mp4")
+        merge_video = generate_daily_video_filename(video_output_dir)
         temp_video_filelist_path = os.path.join(video_output_dir, 'generate_video_with_audio_file_list.txt')
 
         # 创建包含所有视频文件的文本文件
@@ -661,6 +662,9 @@ class VideoService:
         if not self.verify_video_file(merge_video):
             raise Exception(f"生成的视频文件损坏或不完整: {merge_video}")
         
+        # 添加花式文本叠加
+        self.apply_fancy_text_overlays(merge_video)
+        
         # 拼接音频
         add_music(merge_video, self.audio_file)
 
@@ -668,6 +672,95 @@ class VideoService:
         if self.enable_background_music:
             add_background_music(merge_video, self.background_music, self.background_music_volume)
         return merge_video
+    
+    def apply_fancy_text_overlays(self, video_file):
+        """
+        为视频添加花式文本叠加效果
+        """
+        try:
+            # 检查是否启用花式文本功能
+            if not st.session_state.get('enable_fancy_text', False):
+                print("花式文本功能未启用，跳过文本叠加")
+                return
+            
+            print("开始添加花式文本叠加...")
+            
+            # 初始化花式文本服务
+            fancy_service = FancyTextService()
+            if not fancy_service.is_enabled():
+                print("花式文本服务未启用，跳过文本叠加")
+                return
+            
+            # 获取视频信息
+            video_duration = get_video_duration(video_file)
+            video_width, video_height = get_video_info(video_file)
+            
+            if not video_duration or not video_width or not video_height:
+                print("无法获取视频信息，跳过文本叠加")
+                return
+            
+            print(f"视频信息: 时长={video_duration}秒, 分辨率={video_width}x{video_height}")
+            
+            # 生成花式文本滤镜
+            fancy_filter = fancy_service.generate_complete_filter_complex(
+                video_duration, video_width, video_height
+            )
+            
+            if not fancy_filter:
+                print("未生成花式文本滤镜，跳过文本叠加")
+                return
+            
+            print(f"生成的花式文本滤镜: {fancy_filter}")
+            
+            # 生成输出文件路径
+            output_file = generate_temp_filename(video_file)
+            
+            # 构建FFmpeg命令
+            ffmpeg_cmd = [
+                'ffmpeg',
+                '-i', video_file,
+                '-vf', fancy_filter,
+                '-c:a', 'copy',  # 保持音频不变
+                '-y',
+                output_file
+            ]
+            
+            print(f"执行FFmpeg命令: {' '.join(ffmpeg_cmd)}")
+            
+            # 执行FFmpeg命令
+            try:
+                result = subprocess.run(ffmpeg_cmd, capture_output=True, check=True)
+                print("花式文本叠加成功")
+                
+                # 验证输出文件
+                if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+                    # 替换原文件
+                    os.remove(video_file)
+                    os.rename(output_file, video_file)
+                    print(f"花式文本叠加完成: {video_file}")
+                else:
+                    print(f"错误：花式文本叠加输出文件无效 {output_file}")
+                    if os.path.exists(output_file):
+                        os.remove(output_file)
+                        
+            except subprocess.CalledProcessError as e:
+                stdout = e.stdout.decode('gbk', errors='ignore') if e.stdout else ""
+                stderr = e.stderr.decode('gbk', errors='ignore') if e.stderr else ""
+                print(f"FFmpeg花式文本叠加失败:")
+                print(f"命令: {' '.join(ffmpeg_cmd)}")
+                print(f"返回码: {e.returncode}")
+                print(f"标准输出: {stdout}")
+                print(f"错误输出: {stderr}")
+                
+                # 清理临时文件
+                if os.path.exists(output_file):
+                    os.remove(output_file)
+                    
+                print("花式文本叠加失败，继续处理视频...")
+                
+        except Exception as e:
+            print(f"添加花式文本叠加时发生错误: {e}")
+            print("继续处理视频...")
 
     def verify_video_file(self, video_file):
         """

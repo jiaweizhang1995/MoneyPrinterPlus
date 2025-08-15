@@ -37,6 +37,7 @@ from services.video.video_service import DEFAULT_DURATION, get_image_info, get_v
 from tools.file_utils import generate_temp_filename
 from tools.tr_utils import tr
 from tools.utils import run_ffmpeg_command, random_with_system_time
+from tools.video_naming_utils import generate_prefixed_video_filename
 
 # 获取当前脚本的绝对路径
 script_path = os.path.abspath(__file__)
@@ -240,8 +241,7 @@ class VideoMergeService:
 
     def generate_video_with_bg_music(self):
         # 生成视频和音频的代码
-        random_name = str(random_with_system_time())
-        merge_video = os.path.join(video_output_dir, "final-" + random_name + ".mp4")
+        merge_video = generate_prefixed_video_filename(video_output_dir, "merge")
         temp_video_filelist_path = os.path.join(video_output_dir, 'generate_video_with_bg_file_list.txt')
 
         # 创建包含所有视频文件的文本文件

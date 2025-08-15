@@ -1,17 +1,184 @@
-# 视频混剪功能详细文档
+# CLAUDE_CN.md
 
-本文档详细介绍 MoneyPrinterPlus 中的视频混剪功能和逻辑。
+这是MoneyPrinterPlus项目的中文文档，专注于视频混剪区功能和逻辑。
 
 ## 功能概述
 
-视频混剪区（02_mix_video.py）是 MoneyPrinterPlus 的核心功能之一，它允许用户通过以下方式创建高质量的混剪视频：
+视频混剪区是MoneyPrinterPlus的核心功能模块，允许用户通过智能混剪技术创建高质量的短视频。该模块支持完整音频模式和语音合成模式，提供丰富的视频效果和花式文本叠加功能。
 
-- 从本地素材文件夹中智能选择和组合视频片段
-- 为每个场景配置不同的文本内容进行配音
-- 自动匹配音频时长与视频长度
-- 支持多种音频源（远程TTS、本地TTS、音频识别）
-- 添加背景音乐、字幕和过渡效果
-- 支持多种视频格式和布局
+### 主要特性
+- **完整音频模式**: 使用预先准备的MP3音频文件，随机选择目录中的音频
+- **语音合成模式**: 通过LLM生成文案，然后转换为语音
+- **花式文本叠加**: 动态显示产品名称和宣传文字
+- **智能素材选择**: 从本地文件夹中智能选择和组合视频片段  
+- **多音频源支持**: 远程TTS、本地TTS、音频识别
+- **背景音乐混合**: 添加背景音乐、字幕和过渡效果
+- **多格式兼容**: 支持多种视频格式和布局
+
+## 核心文件结构
+
+### 用户界面层
+- **pages/02_mix_video.py**: 视频混剪区主界面，包含所有用户交互控件和配置选项
+- **gui.py**: 主应用入口，提供基础配置和服务初始化
+
+### 服务层
+- **services/hunjian/hunjian_service.py**: 混剪核心业务逻辑，处理视频生成流程
+- **services/video/video_service.py**: 视频处理服务，负责视频合并、特效和后处理
+- **services/video/fancy_text_service.py**: 花式文本叠加服务，生成动态文本效果
+
+### 配置层
+- **config/fancy_text_overlays.yml**: 花式文本叠加配置文件
+- **config/config.py**: 全局配置管理
+
+### 工具层
+- **tools/video_naming_utils.py**: 视频文件命名工具
+- **tools/tr_utils.py**: 国际化翻译工具
+
+## 主要功能模块
+
+### 1. 混剪模式选择
+
+#### 完整音频模式
+- **功能**: 使用预先准备的完整MP3音频文件
+- **特点**: 随机选择目录中的音频文件，无需语音合成
+- **限制**: 此模式下字幕功能被禁用，避免同步问题
+- **实现位置**: `services/hunjian/hunjian_service.py:100-150`
+
+#### 语音合成模式
+- **功能**: 通过LLM生成文案，然后转换为语音
+- **特点**: 支持多种TTS服务，可生成匹配的字幕
+- **配置**: 支持语音提供商选择、语速调节等
+- **实现位置**: `services/hunjian/hunjian_service.py:200-300`
+
+### 2. 花式文本叠加系统
+
+#### 配置文件结构 (config/fancy_text_overlays.yml)
+```yaml
+fancy_text:
+  enable: true
+  frequency: 25  # 每25秒出现一次
+  duration: 4    # 每次显示4秒
+  product_name: "Donbukll wrapping mask"
+  brand_name: "Donbukll"
+  phrases:
+    - main: "Donbukll"
+      sub: "wrapping mask"
+    - main: "NIGHT FACE"
+      sub: "MASK"
+  benefits:
+    - "深层清洁"
+    - "补水保湿"  
+    - "紧致肌肤"
+  styles:
+    main_text:
+      font_size_ratio: 0.08
+      font_color: "white"
+      font_file: "fonts/sarasa-gothic-sc-bold.ttf"
+    sub_text:
+      font_size_ratio: 0.04
+      font_color: "yellow"
+```
+
+#### 核心服务类 (services/video/fancy_text_service.py)
+```python
+class FancyTextService:
+    def generate_drawtext_filter(self, main_text: str, sub_text: str, 
+                               video_width: int, video_height: int,
+                               start_time: float, duration: float) -> str:
+        """生成FFmpeg drawtext滤镜命令"""
+        
+    def get_text_content(self, video_duration: float) -> List[Dict]:
+        """根据视频时长生成文本内容时间线"""
+        
+    def get_text_position(self, video_width: int, video_height: int) -> Dict:
+        """计算文本在视频中的位置"""
+```
+
+### 3. 视频处理流程
+
+#### 主要处理步骤
+1. **初始化**: 加载配置，验证输入参数
+2. **素材收集**: 根据关键词获取视频片段
+3. **音频处理**: 完整音频模式或TTS生成
+4. **视频合并**: 使用FFmpeg进行视频片段拼接
+5. **特效应用**: 添加转场、滤镜等效果
+6. **文本叠加**: 应用花式文本效果
+7. **最终输出**: 生成带日期序号的视频文件
+
+#### 关键代码位置
+```python
+# services/hunjian/hunjian_service.py
+def generate_video(self, params):
+    """主要视频生成方法"""
+    # 1. 参数验证和初始化
+    # 2. 素材收集
+    # 3. 音频处理
+    # 4. 视频合并
+    # 5. 后处理和输出
+```
+
+### 4. 用户界面逻辑
+
+#### 主界面结构 (pages/02_mix_video.py)
+```python
+# 模式选择区域
+mode_container = st.container(border=True)
+with mode_container:
+    st.radio("选择混剪模式", ["完整音频", "语音合成"])
+
+# 花式文本配置区域  
+fancy_text_container = st.container(border=True)
+with fancy_text_container:
+    st.checkbox("启用花式文本")
+    st.slider("出现频率", min_value=10, max_value=60)
+    st.slider("显示时长", min_value=2, max_value=10)
+
+# 视频配置区域
+video_config_container = st.container(border=True)
+with video_config_container:
+    st.selectbox("视频分辨率", ["1080x1920", "1080x1080", "1920x1080"])
+    st.slider("视频时长", min_value=30, max_value=300)
+```
+
+#### 会话状态管理
+- **完整音频目录**: `st.session_state.get('complete_audio_dir')`
+- **花式文本配置**: `st.session_state.get('fancy_text_config')`
+- **视频参数**: `st.session_state.get('video_params')`
+
+### 5. 文件命名系统
+
+#### 命名规则 (tools/video_naming_utils.py)
+```python
+def generate_video_filename(output_dir: str, prefix: str = "") -> str:
+    """
+    生成格式: 2025-08-16_01.mp4, 2025-08-16_02.mp4
+    自动检测已存在文件并递增序号
+    """
+    today = datetime.now().strftime("%Y-%m-%d")
+    sequence = 1
+    while True:
+        filename = f"{prefix}{today}_{sequence:02d}.mp4"
+        if not os.path.exists(os.path.join(output_dir, filename)):
+            return filename
+        sequence += 1
+```
+
+### 6. 配置系统集成
+
+#### 配置文件合并逻辑
+```python
+def merge_fancy_text_config(session_config: dict, file_config: dict) -> dict:
+    """
+    将用户界面配置与配置文件合并
+    用户设置优先级高于默认配置
+    """
+    merged = file_config.copy()
+    if session_config.get('enable_fancy_text'):
+        merged['fancy_text']['enable'] = True
+        merged['fancy_text']['frequency'] = session_config.get('frequency', 25)
+        merged['fancy_text']['duration'] = session_config.get('duration', 4)
+    return merged
+```
 
 ## 界面结构和组件
 
@@ -356,35 +523,88 @@ st.session_state['subtitle_color']  # 字幕颜色
 st.session_state['videos_count']  # 生成视频数量
 ```
 
-## 技术特性
+## 技术实现细节
 
-### 1. 智能素材选择
-- 随机化算法确保内容多样性
-- 优先选择视频文件而非图片
-- 自动调整片段长度匹配音频时长
-- 支持图片素材的默认时长设置
+### FFmpeg 集成
+- **视频合并**: 使用concat滤镜进行无缝拼接
+- **文本叠加**: 使用drawtext滤镜实现动态文本效果
+- **转场效果**: 支持30+种专业转场效果
+- **音频处理**: 音频同步和音量标准化
 
-### 2. 多格式支持
-- **视频格式**: MP4, MOV
-- **图片格式**: JPG, JPEG, PNG
-- **音频格式**: MP3, WAV
-- **字幕格式**: 支持多种字体和样式
+### 多线程处理
+- **后台任务**: 视频生成在独立线程中执行
+- **进度追踪**: 实时更新处理进度
+- **错误处理**: 完善的异常捕获和恢复机制
 
-### 3. 自适应处理
-- 根据选择的布局自动调整分辨率选项
-- 智能音视频时长匹配
-- 资源不足时的警告机制
+### 内存管理
+- **资源释放**: 及时释放FFmpeg进程和临时文件
+- **缓存优化**: 智能缓存常用资源
+- **内存监控**: 防止内存泄漏
+
+## 开发和测试
+
+### 环境要求
+- Python 3.10 或 3.11
+- FFmpeg 6.1.1+ (必须在PATH中)
+- Windows需要Visual C++ Redistributable
+
+### 运行命令
+```bash
+# Windows自动启动
+start.bat
+
+# 手动启动
+streamlit run gui.py
+```
+
+### 测试命令
+```bash
+# 测试花式文本服务
+python -m pytest tests/test_fancy_text_service.py
+
+# 测试视频命名工具
+python -m pytest tests/test_video_naming_utils.py
+
+# 测试混剪服务
+python -m pytest tests/test_hunjian_service.py
+```
+
+## 常见问题和解决方案
+
+### 1. 完整音频模式问题
+- **问题**: 音频文件无法识别
+- **解决**: 确保MP3文件格式正确，路径不包含特殊字符
+
+### 2. 花式文本显示问题  
+- **问题**: 文本不显示或位置错误
+- **解决**: 检查字体文件路径，调整坐标计算逻辑
+
+### 3. 视频输出问题
+- **问题**: 生成的视频质量不佳
+- **解决**: 调整FFmpeg编码参数，检查输入素材质量
 
 ### 4. 性能优化
-- 会话状态持久化 (`save_session_state_to_yaml()`)
-- 文件系统缓存
-- 批量处理支持
+- **内存使用**: 处理大文件时注意内存管理
+- **处理速度**: 可通过多线程和硬件加速提升性能
+- **存储空间**: 及时清理临时文件和缓存
 
-### 5. 用户体验
-- 实时状态显示
-- 进度条和状态更新
-- 错误处理和用户提示
-- 音频测试功能
+## 扩展开发
+
+### 添加新的文本效果
+1. 在`fancy_text_service.py`中添加新的样式模板
+2. 更新配置文件结构
+3. 在UI中添加对应的控制选项
+4. 编写相应的测试用例
+
+### 支持新的音频格式
+1. 在`hunjian_service.py`中添加格式检测逻辑
+2. 更新FFmpeg命令参数
+3. 测试兼容性和性能
+
+### 优化视频处理性能
+1. 实现GPU硬件加速支持
+2. 优化FFmpeg命令行参数
+3. 添加进度缓存和断点续传功能
 
 ## 使用流程建议
 

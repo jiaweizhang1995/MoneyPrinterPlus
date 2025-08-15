@@ -1,0 +1,149 @@
+# 花式文本叠加配置文件
+# Fancy Text Overlays Configuration
+
+fancy_text:
+  # 功能开关
+  enable: true
+  
+  # 显示频率配置
+  frequency: 25  # 每25秒出现一次
+  duration: 4    # 每次显示4秒
+  fade_duration: 0.5  # 淡入淡出时间
+  
+  # 产品核心信息
+  product_name: "Donbukll wrapping mask"
+  brand_name: "Donbukll"
+  
+  # 产品优势文本（三行，每行三个单词）
+  advantages:
+    - ["Deep moisturizing effect", "Natural organic ingredients", "Gentle skin care"]
+    - ["Anti-aging formula", "Collagen boost technology", "Wrinkle reduction power"] 
+    - ["24-hour hydration", "Vitamin enriched formula", "Dermatologist tested safe"]
+    - ["Premium beauty treatment", "Professional skincare solution", "Transform skin today"]
+    - ["Instant visible results", "Long lasting effects", "Smooth silky texture"]
+    - ["Hypoallergenic safe formula", "Paraben free natural", "Cruelty free certified"]
+  
+  # 短语组合（主标题+副标题）
+  phrases:
+    - main: "Donbukll"
+      sub: "wrapping mask"
+    - main: "Premium"
+      sub: "skincare solution"
+    - main: "Transform your"
+      sub: "skin today"
+    - main: "Professional"
+      sub: "beauty treatment"
+    - main: "Instant"
+      sub: "visible results"
+    - main: "Natural"
+      sub: "organic formula"
+    - main: "24-Hour"
+      sub: "deep hydration"
+    - main: "Anti-Aging"
+      sub: "collagen boost"
+  
+  # 样式配置
+  styles:
+    # 主标题样式 (如"Donbukll")
+    main_title:
+      font_file: "fonts/PingFang.ttc"
+      font_size: 46
+      font_color: "white"
+      font_style: "italic"
+      position:
+        x: "center"  # center, left, right, 或具体数值
+        y: 120       # 距离顶部像素值
+      shadow:
+        enable: true
+        color: "black"
+        offset_x: 3
+        offset_y: 3
+        blur: 2
+      outline:
+        enable: true
+        color: "gray"
+        width: 1
+      animation:
+        type: "fade_in"  # fade_in, slide_left, slide_right, scale_in
+        duration: 0.8
+    
+    # 副标题样式 (如"night face mask")  
+    sub_title:
+      font_file: "fonts/Songti.ttc"
+      font_size: 32
+      font_color: "black"
+      font_style: "bold"
+      position:
+        x: "center"
+        y: 180       # 距离顶部像素值，在主标题下方
+      background:
+        enable: true
+        color: "orange"
+        padding: 12
+        border_radius: 8
+        opacity: 0.9
+      outline:
+        enable: false
+      animation:
+        type: "slide_up"
+        duration: 0.6
+        delay: 0.3     # 在主标题后延迟显示
+  
+  # 位置预设（可选择的位置模板）
+  position_presets:
+    top_center:
+      main_y: 100
+      sub_y: 160
+    top_left:
+      main_y: 100
+      sub_y: 160
+      main_x: 80
+      sub_x: 80
+    center:
+      main_y: "center-30"  # 屏幕中心向上偏移30像素
+      sub_y: "center+30"   # 屏幕中心向下偏移30像素
+    bottom_center:
+      main_y: "height-200"
+      sub_y: "height-140"
+  
+  # 显示规则
+  display_rules:
+    # 随机选择概率
+    phrase_weight: 70      # 70%概率显示短语组合
+    advantage_weight: 30   # 30%概率显示产品优势
+    
+    # 位置随机化
+    random_position: true
+    position_weights:
+      top_center: 50
+      top_left: 20
+      center: 20
+      bottom_center: 10
+    
+    # 样式变化
+    random_colors: false   # 是否随机颜色
+    random_fonts: false    # 是否随机字体
+  
+  # 兼容性配置
+  compatibility:
+    # 不同分辨率的字体大小调整
+    font_scaling:
+      "1080x1920":  # 竖屏1080p
+        main_size: 46
+        sub_size: 32
+      "1280x720":   # 横屏720p
+        main_size: 42
+        sub_size: 28
+      "1080x1080":  # 方形1080p
+        main_size: 44
+        sub_size: 30
+    
+    # Windows路径处理
+    windows_font_path: true
+    
+    # 字体回退
+    fallback_fonts:
+      - "fonts/PingFang.ttc"
+      - "fonts/Songti.ttc" 
+      - "Arial"
+      - "sans-serif"
