@@ -27,7 +27,7 @@ import subprocess
 import streamlit as st
 
 from tools.file_utils import random_line_from_text_file
-from tools.utils import get_must_session_option, random_with_system_time, extent_audio, run_ffmpeg_command
+from tools.utils import get_must_session_option, random_with_system_time, extent_audio, run_ffmpeg_command, select_random_audio_file, convert_mp3_to_wav, trim_audio_to_duration
 
 # 获取当前脚本的绝对路径
 script_path = os.path.abspath(__file__)
@@ -135,3 +135,94 @@ def concat_audio_list(audio_output_file_list):
     os.remove(concat_audio_file)
     print(f"Audio files have been merged into {temp_output_file_name}")
     return temp_output_file_name
+
+
+def get_session_video_scene_dirs():
+    """
+    获取会话中配置的视频场景目录列表
+    :return: 视频目录列表
+    """
+    video_dir_list = []
+    if 'scene_number' not in st.session_state:
+        st.session_state['scene_number'] = 0
+    for i in range(int(st.session_state.get('scene_number'))+1):
+        print("select video scene " + str(i + 1))
+        if "video_scene_folder_" + str(i + 1) in st.session_state and st.session_state["video_scene_folder_" + str(i + 1)] is not None:
+            video_dir_list.append(st.session_state["video_scene_folder_" + str(i + 1)])
+    return video_dir_list
+
+
+def get_audio_and_video_list_from_mp3():
+    """
+    完整音频模式：从MP3目录随机选择音频文件并处理为与视频匹配的音频列表
+    新的处理逻辑：不分割音频，直接使用完整音频匹配所有视频场景
+    :return: 音频文件列表, 视频目录列表
+    """
+    from services.video.video_service import get_audio_duration
+    
+    # 获取完整音频目录
+    full_audio_dir = get_must_session_option("full_audio_dir", "请先设置音频文件目录")
+    
+    # 获取视频场景目录列表
+    video_dir_list = get_session_video_scene_dirs()
+    
+    if not video_dir_list:
+        st.toast("请先配置视频场景资源目录", icon="⚠️")
+        st.stop()
+    
+    # 随机选择一个MP3文件
+    selected_mp3 = select_random_audio_file(full_audio_dir, ".mp3,.wav")
+    if not selected_mp3:
+        st.toast("在指定目录中未找到音频文件", icon="⚠️")
+        st.stop()
+    
+    print(f"选择的音频文件: {selected_mp3}")
+    
+    # 转换为WAV格式（如果是MP3）
+    if selected_mp3.lower().endswith('.mp3'):
+        # 生成临时WAV文件路径
+        temp_file_name = str(random_with_system_time())
+        converted_wav = os.path.join(audio_output_dir, f"{temp_file_name}_converted.wav")
+        converted_wav = convert_mp3_to_wav(selected_mp3, converted_wav)
+        if not converted_wav:
+            st.toast("音频格式转换失败", icon="⚠️")
+            st.stop()
+        working_audio = converted_wav
+    else:
+        working_audio = selected_mp3
+    
+    # 获取音频总时长
+    total_audio_duration = get_audio_duration(working_audio)
+    if not total_audio_duration:
+        st.toast("无法获取音频时长", icon="⚠️")
+        st.stop()
+    
+    print(f"音频总时长: {total_audio_duration}秒")
+    print("完整音频模式：不分割音频，直接使用完整音频")
+    
+    # 保存完整音频信息到session_state
+    st.session_state["full_audio_original_file"] = working_audio
+    st.session_state["full_audio_mode"] = True  # 标记为完整音频模式
+    st.session_state["full_audio_duration"] = total_audio_duration
+    
+    # 返回完整音频文件（作为单个元素的列表）和视频目录列表
+    # 这样可以保持与原有接口的兼容性
+    return [working_audio], video_dir_list
+
+
+def cleanup_full_audio_temp_files():
+    """
+    清理完整音频模式下生成的临时文件
+    """
+    # 清理原始转换的音频文件（如果是从MP3转换而来）
+    full_audio_original = st.session_state.get("full_audio_original_file")
+    if full_audio_original and os.path.exists(full_audio_original):
+        # 检查是否是临时转换文件（包含converted字样）
+        if "_converted.wav" in full_audio_original:
+            os.remove(full_audio_original)
+            print(f"清理临时音频文件: {full_audio_original}")
+    
+    # 清理session_state中的临时变量
+    for key in ["full_audio_original_file", "full_audio_mode", "full_audio_duration"]:
+        if key in st.session_state:
+            del st.session_state[key]

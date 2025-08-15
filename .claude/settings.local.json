@@ -3,7 +3,11 @@
     "allow": [
       "Bash(mv:*)",
       "Bash(del \"E:\\PycharmProjects\\MoneyPrinterPlus\\config\\session.yml\")",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(python:*)",
+      "Bash(PYTHONPATH=. venv/Scripts/python.exe -m py_compile services/hunjian/hunjian_service.py)",
+      "Bash(PYTHONPATH=. venv/Scripts/python.exe -m py_compile main.py)",
+      "Bash(PYTHONPATH=. venv/Scripts/python.exe -m py_compile services/video/video_service.py)"
     ],
     "deny": []
   }

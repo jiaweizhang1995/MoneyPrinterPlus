@@ -164,3 +164,111 @@ def extent_audio(audio_file, pad_dur=2):
     if os.path.exists(temp_file):
         os.remove(audio_file)
         os.renames(temp_file, audio_file)
+
+
+def trim_audio_to_duration(audio_file, target_duration, output_file=None):
+    """
+    将音频文件裁剪到指定时长
+    :param audio_file: 输入音频文件路径
+    :param target_duration: 目标时长（秒）
+    :param output_file: 输出文件路径，如果为None则覆盖原文件
+    :return: 输出文件路径
+    """
+    if output_file is None:
+        output_file = generate_temp_filename(audio_file)
+        overwrite_original = True
+    else:
+        overwrite_original = False
+    
+    # 构造ffmpeg命令
+    command = [
+        'ffmpeg',
+        '-i', audio_file,
+        '-t', str(target_duration),  # 截取到指定时长
+        '-c', 'copy',  # 复制编码，不重新编码
+        '-y',  # 覆盖输出文件
+        output_file
+    ]
+    
+    try:
+        # 执行命令
+        subprocess.run(command, capture_output=True, check=True)
+        
+        if overwrite_original:
+            # 重命名最终的文件
+            if os.path.exists(output_file):
+                os.remove(audio_file)
+                os.renames(output_file, audio_file)
+            return audio_file
+        else:
+            return output_file
+    except subprocess.CalledProcessError as e:
+        print(f"音频裁剪失败: {e}")
+        return None
+
+
+def convert_mp3_to_wav(mp3_file, wav_file=None):
+    """
+    将MP3文件转换为WAV格式
+    :param mp3_file: 输入MP3文件路径
+    :param wav_file: 输出WAV文件路径，如果为None则自动生成
+    :return: 输出WAV文件路径
+    """
+    if wav_file is None:
+        # 生成输出文件名
+        base_name = os.path.splitext(mp3_file)[0]
+        wav_file = base_name + ".wav"
+    
+    # 构造ffmpeg命令
+    command = [
+        'ffmpeg',
+        '-i', mp3_file,
+        '-acodec', 'pcm_s16le',  # WAV格式编码
+        '-ar', '16000',  # 采样率16kHz
+        '-ac', '1',  # 单声道
+        '-y',  # 覆盖输出文件
+        wav_file
+    ]
+    
+    try:
+        # 执行命令
+        subprocess.run(command, capture_output=True, check=True)
+        return wav_file
+    except subprocess.CalledProcessError as e:
+        print(f"MP3转WAV失败: {e}")
+        return None
+
+
+def get_audio_files_from_dir(audio_dir, extensions=".mp3,.wav"):
+    """
+    从目录中获取音频文件列表
+    :param audio_dir: 音频文件目录
+    :param extensions: 支持的文件扩展名，用逗号分隔
+    :return: 音频文件路径列表
+    """
+    extension_list = [ext.strip() for ext in extensions.split(',')]
+    audio_files = []
+    
+    if audio_dir and os.path.exists(audio_dir):
+        audio_dir = os.path.abspath(audio_dir)
+        
+        for filename in os.listdir(audio_dir):
+            if any(filename.lower().endswith(ext) for ext in extension_list):
+                audio_files.append(os.path.join(audio_dir, filename))
+    
+    return audio_files
+
+
+def select_random_audio_file(audio_dir, extensions=".mp3,.wav"):
+    """
+    从目录中随机选择一个音频文件
+    :param audio_dir: 音频文件目录
+    :param extensions: 支持的文件扩展名
+    :return: 随机选择的音频文件路径，如果没有文件则返回None
+    """
+    audio_files = get_audio_files_from_dir(audio_dir, extensions)
+    
+    if audio_files:
+        return random.choice(audio_files)
+    else:
+        return None

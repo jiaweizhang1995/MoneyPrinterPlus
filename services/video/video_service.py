@@ -189,13 +189,28 @@ def add_music(video_file, audio_file):
         output_file  # 输出文件路径
     ]
     print(" ".join(ffmpeg_cmd))
-    result = subprocess.run(ffmpeg_cmd, capture_output=True)
-    stdout = result.stdout.decode('gbk', errors='ignore')
-    stderr = result.stderr.decode('gbk', errors='ignore')
-    # 重命名最终的文件
-    if os.path.exists(output_file):
-        os.remove(video_file)
-        os.renames(output_file, video_file)
+    try:
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, check=True)
+        print("视频音频合成成功")
+        # 重命名最终的文件
+        if os.path.exists(output_file):
+            os.remove(video_file)
+            os.renames(output_file, video_file)
+        else:
+            print(f"错误：输出文件不存在 {output_file}")
+            raise FileNotFoundError(f"FFmpeg未能生成输出文件: {output_file}")
+    except subprocess.CalledProcessError as e:
+        stdout = e.stdout.decode('gbk', errors='ignore') if e.stdout else ""
+        stderr = e.stderr.decode('gbk', errors='ignore') if e.stderr else ""
+        print(f"FFmpeg视频音频合成失败:")
+        print(f"命令: {' '.join(ffmpeg_cmd)}")
+        print(f"返回码: {e.returncode}")
+        print(f"标准输出: {stdout}")
+        print(f"错误输出: {stderr}")
+        raise Exception(f"视频音频合成失败: {stderr}")
+    except Exception as e:
+        print(f"视频音频合成过程中发生错误: {e}")
+        raise
 
 
 def add_background_music(video_file, audio_file, bgm_volume=0.5):
@@ -215,15 +230,29 @@ def add_background_music(video_file, audio_file, bgm_volume=0.5):
         output_file  # 输出文件
     ]
     # 调用FFmpeg命令
-    print(command)
-    result = subprocess.run(command, capture_output=True)
-    # 处理输出解码
-    stdout = result.stdout.decode('gbk', errors='ignore')
-    stderr = result.stderr.decode('gbk', errors='ignore')
-    # 重命名最终的文件
-    if os.path.exists(output_file):
-        os.remove(video_file)
-        os.renames(output_file, video_file)
+    print(" ".join(command))
+    try:
+        result = subprocess.run(command, capture_output=True, check=True)
+        print("背景音乐添加成功")
+        # 重命名最终的文件
+        if os.path.exists(output_file):
+            os.remove(video_file)
+            os.renames(output_file, video_file)
+        else:
+            print(f"错误：背景音乐输出文件不存在 {output_file}")
+            raise FileNotFoundError(f"FFmpeg未能生成背景音乐输出文件: {output_file}")
+    except subprocess.CalledProcessError as e:
+        stdout = e.stdout.decode('gbk', errors='ignore') if e.stdout else ""
+        stderr = e.stderr.decode('gbk', errors='ignore') if e.stderr else ""
+        print(f"FFmpeg背景音乐添加失败:")
+        print(f"命令: {' '.join(command)}")
+        print(f"返回码: {e.returncode}")
+        print(f"标准输出: {stdout}")
+        print(f"错误输出: {stderr}")
+        raise Exception(f"背景音乐添加失败: {stderr}")
+    except Exception as e:
+        print(f"背景音乐添加过程中发生错误: {e}")
+        raise
 
 
 class VideoMixService:
@@ -305,6 +334,100 @@ class VideoMixService:
         if total_length < audio_duration:
             st.toast(tr("You Need More Resource"), icon="⚠️")
             st.stop()
+        return matching_videos, total_length
+
+    def match_videos_from_dir_full_audio(self, video_dir, complete_audio_file, is_head=False):
+        """
+        完整音频模式下的视频匹配方法
+        为每个视频目录分配音频时长的一部分
+        """
+        matching_videos = []
+        
+        # 获取完整音频时长和场景信息
+        total_audio_duration = st.session_state.get("full_audio_duration", 0)
+        scene_count = len(st.session_state.get("video_dir_list", []))
+        
+        if scene_count == 0 or total_audio_duration == 0:
+            print("警告：无法获取完整音频信息")
+            return matching_videos, 0
+        
+        # 计算当前场景应该占用的音频时长（均匀分配）
+        segment_duration = total_audio_duration / scene_count
+        
+        print(f"完整音频模式匹配视频：目标时长 {segment_duration:.2f}秒")
+        
+        # 获取媒体文件夹中的所有图片和视频文件
+        media_files = [os.path.join(video_dir, f) for f in os.listdir(video_dir) if
+                       f.lower().endswith(('.jpg', '.jpeg', '.png', '.mp4', '.mov'))]
+
+        # 随机排序媒体文件
+        random.shuffle(media_files)
+
+        # 确保有视频文件在列表中
+        video_files = [f for f in media_files if f.lower().endswith(('.mp4', '.mov'))]
+        if video_files:
+            # 从视频文件中随机选择一个
+            random_video = random.choice(video_files)
+            # 将随机选择的视频文件从列表中移除
+            media_files.remove(random_video)
+            # 将随机选择的视频文件添加到列表的开头
+            media_files.insert(0, random_video)
+
+        total_length = 0
+        i = 0
+        for video_file in media_files:
+            if video_file.lower().endswith(('.jpg', '.jpeg', '.png')):
+                video_duration = self.default_duration
+            else:
+                video_duration = get_video_duration(video_file)
+            
+            # 短的视频拉长到最小值
+            if video_duration < self.segment_min_length:
+                video_duration = self.segment_min_length
+            if video_duration > self.segment_max_length:
+                video_duration = self.segment_max_length
+
+            print(f"视频文件: {video_file}, 时长: {video_duration}秒")
+            
+            if total_length < segment_duration:
+                if self.enable_video_transition_effect:
+                    if i == 0 and is_head:
+                        total_length = total_length + video_duration
+                    else:
+                        total_length = total_length + video_duration - float(
+                            self.video_transition_effect_duration)
+                else:
+                    total_length = total_length + video_duration
+                matching_videos.append(video_file)
+                i = i + 1
+                
+                print(f"累计时长: {total_length:.2f}秒, 目标: {segment_duration:.2f}秒")
+            else:
+                break
+        
+        print(f"场景视频匹配完成：实际时长 {total_length:.2f}秒, 目标时长 {segment_duration:.2f}秒")
+        
+        if total_length < segment_duration * 0.8:  # 如果实际时长小于目标时长的80%，给出警告
+            print(f"警告：视频素材可能不足，实际时长 {total_length:.2f}秒 < 目标时长 {segment_duration:.2f}秒")
+            # 在完整音频模式下，如果视频素材不足，我们不能延长音频
+            # 但可以通过重复最后一个视频来填充时间
+            if matching_videos:
+                last_video = matching_videos[-1]
+                while total_length < segment_duration:
+                    if last_video.lower().endswith(('.jpg', '.jpeg', '.png')):
+                        additional_duration = min(self.default_duration, segment_duration - total_length)
+                    else:
+                        video_duration = get_video_duration(last_video)
+                        additional_duration = min(video_duration, segment_duration - total_length)
+                    
+                    matching_videos.append(last_video)
+                    total_length += additional_duration
+                    print(f"重复视频片段以填充时长，当前累计: {total_length:.2f}秒")
+                    
+                    if len(matching_videos) > 20:  # 避免无限循环
+                        print("警告：为避免无限循环，停止添加视频片段")
+                        break
+        
         return matching_videos, total_length
 
 
@@ -534,6 +657,10 @@ class VideoService:
         # 删除临时文件
         os.remove(temp_video_filelist_path)
 
+        # 验证视频文件的完整性
+        if not self.verify_video_file(merge_video):
+            raise Exception(f"生成的视频文件损坏或不完整: {merge_video}")
+        
         # 拼接音频
         add_music(merge_video, self.audio_file)
 
@@ -541,3 +668,35 @@ class VideoService:
         if self.enable_background_music:
             add_background_music(merge_video, self.background_music, self.background_music_volume)
         return merge_video
+
+    def verify_video_file(self, video_file):
+        """
+        验证视频文件的完整性
+        """
+        if not os.path.exists(video_file):
+            print(f"视频文件不存在: {video_file}")
+            return False
+        
+        file_size = os.path.getsize(video_file)
+        if file_size == 0:
+            print(f"视频文件大小为0: {video_file}")
+            return False
+        
+        # 使用ffprobe检查视频文件
+        try:
+            cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', video_file]
+            result = subprocess.run(cmd, capture_output=True, check=True)
+            
+            if result.returncode == 0:
+                print(f"视频文件验证成功: {video_file} ({file_size} bytes)")
+                return True
+            else:
+                print(f"ffprobe验证失败: {video_file}")
+                return False
+        except subprocess.CalledProcessError as e:
+            print(f"ffprobe验证视频文件时出错: {e}")
+            print(f"stderr: {e.stderr.decode('gbk', errors='ignore') if e.stderr else ''}")
+            return False
+        except Exception as e:
+            print(f"验证视频文件时发生未知错误: {e}")
+            return False

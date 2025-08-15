@@ -90,8 +90,12 @@ def more_scene_fragment(video_scene_container):
                 st.text_input(label=tr("Video Scene Resource"),
                               placeholder=tr("Please input video scene resource folder path"),
                               key="video_scene_folder_" + str(k + 2))
-                st.text_input(label=tr("Video Scene Text"), placeholder=tr("Please input video scene text path"),
-                              key="video_scene_text_" + str(k + 2))
+                # 条件显示文案路径输入框
+                if not st.session_state.get("use_full_audio", False):
+                    st.text_input(label=tr("Video Scene Text"), placeholder=tr("Please input video scene text path"),
+                                  key="video_scene_text_" + str(k + 2))
+                else:
+                    st.info("📝 已启用完整音频模式，无需输入文案路径")
 
 
 def generate_video_for_mix(video_generator):
@@ -113,14 +117,36 @@ st.markdown("<h2 style='text-align: center;padding-top: 0rem;'>By 阿城</h2>", 
 mix_video_container = st.container(border=True)
 with mix_video_container:
     st.subheader(tr("Mix Video"))
+    
+    # 完整音频选项
+    full_audio_container = st.container(border=True)
+    with full_audio_container:
+        st.subheader("🎵 完整音频配置")
+        audio_columns = st.columns(2)
+        with audio_columns[0]:
+            use_full_audio = st.checkbox(label="是否使用完整音频", 
+                                       key="use_full_audio", 
+                                       value=False,
+                                       help="启用后将跳过TTS语音合成，直接使用MP3音频文件")
+        with audio_columns[1]:
+            if use_full_audio:
+                st.text_input(label="音频文件目录", 
+                            placeholder="请输入包含MP3文件的目录路径",
+                            key="full_audio_dir",
+                            help="系统将从此目录随机选择MP3文件作为配音")
+    
     video_scene_container = st.container(border=True)
     with video_scene_container:
         st.subheader(tr("Mix Video Scene") + str(1))
         st.text_input(label=tr("Video Scene Resource"), placeholder=tr("Please input video scene resource folder path"),
                       key="video_scene_folder_" + str(1))
-        st.text_input(label=tr("Video Scene Text"), placeholder=tr("Please input video scene text path"),
-                      help=tr("One Line Text For One Scene,UTF-8 encoding"),
-                      key="video_scene_text_" + str(1))
+        # 条件显示文案路径输入框
+        if not st.session_state.get("use_full_audio", False):
+            st.text_input(label=tr("Video Scene Text"), placeholder=tr("Please input video scene text path"),
+                          help=tr("One Line Text For One Scene,UTF-8 encoding"),
+                          key="video_scene_text_" + str(1))
+        else:
+            st.info("📝 已启用完整音频模式，无需输入文案路径")
     more_scene_fragment(video_scene_container)
     st_columns = st.columns(2)
     with st_columns[0]:
@@ -136,44 +162,49 @@ with captioning_container:
     # 配音
     st.subheader(tr("Video Captioning") + " - Fish Audio")
     
-    # FishAudio 配置
-    st.info("🐟 使用 Fish Audio 高质量语音合成服务，基于ALLE模型")
-    
-    llm_columns = st.columns(3)
-    with llm_columns[0]:
-        # 音频温度参数
-        st.slider(
-            label="音频温度 (Temperature)", 
-            min_value=0.1, 
-            max_value=1.0, 
-            value=0.7, 
-            step=0.1,
-            key="fishaudio_temperature",
-            help="控制语音的随机性，较低值更稳定，较高值更多样化"
-        )
-    
-    with llm_columns[1]:
-        # 音频格式选择
-        st.selectbox(
-            label="音频格式",
-            options=["mp3", "wav"],
-            index=0,
-            key="fishaudio_format",
-            help="选择输出音频格式"
-        )
-    
-    with llm_columns[2]:
-        # 测试按钮
-        st.button(
-            label="🎵 测试 Fish Audio", 
-            type="primary", 
-            on_click=try_test_fishaudio,
-            help="测试Fish Audio语音合成效果"
-        )
-    
-    # 模型信息
-    st.caption("🔧 当前使用模型: ALLE (高质量多语言TTS模型)")
-    st.caption("📝 支持从文案文件随机选取文本进行语音合成")
+    # 检查是否启用完整音频模式
+    if st.session_state.get("use_full_audio", False):
+        st.warning("⚠️ 已启用完整音频模式，将跳过TTS语音合成流程")
+        st.info("🎵 系统将直接使用MP3音频文件进行配音，无需配置语音合成参数")
+    else:
+        # FishAudio 配置
+        st.info("🐟 使用 Fish Audio 高质量语音合成服务，基于ALLE模型")
+        
+        llm_columns = st.columns(3)
+        with llm_columns[0]:
+            # 音频温度参数
+            st.slider(
+                label="音频温度 (Temperature)", 
+                min_value=0.1, 
+                max_value=1.0, 
+                value=0.7, 
+                step=0.1,
+                key="fishaudio_temperature",
+                help="控制语音的随机性，较低值更稳定，较高值更多样化"
+            )
+        
+        with llm_columns[1]:
+            # 音频格式选择
+            st.selectbox(
+                label="音频格式",
+                options=["mp3", "wav"],
+                index=0,
+                key="fishaudio_format",
+                help="选择输出音频格式"
+            )
+        
+        with llm_columns[2]:
+            # 测试按钮
+            st.button(
+                label="🎵 测试 Fish Audio", 
+                type="primary", 
+                on_click=try_test_fishaudio,
+                help="测试Fish Audio语音合成效果"
+            )
+        
+        # 模型信息
+        st.caption("🔧 当前使用模型: ALLE (高质量多语言TTS模型)")
+        st.caption("📝 支持从文案文件随机选取文本进行语音合成")
 
 recognition_container = st.container(border=True)
 with recognition_container:
@@ -254,7 +285,13 @@ with subtitle_container:
     st.subheader(tr("Video Subtitles"))
     llm_columns = st.columns(4)
     with llm_columns[0]:
-        st.checkbox(label=tr("Enable subtitles"), key="enable_subtitles", value=True)
+        # 当启用完整音频模式时禁用字幕选项
+        use_full_audio = st.session_state.get("use_full_audio", False)
+        if use_full_audio:
+            st.checkbox(label=tr("Enable subtitles"), key="enable_subtitles", value=False, disabled=True, 
+                       help="完整音频模式下不支持字幕生成")
+        else:
+            st.checkbox(label=tr("Enable subtitles"), key="enable_subtitles", value=True)
     with llm_columns[1]:
         st.selectbox(label=tr("subtitle font"), key="subtitle_font",
                      options=["Songti SC Bold",

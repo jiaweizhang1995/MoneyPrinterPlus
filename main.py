@@ -34,7 +34,7 @@ from services.audio.cosyvoice_service import CosyVoiceAudioService
 from services.audio.tencent_tts_service import TencentAudioService
 from services.audio.fishaudio_service import FishAudioService
 from services.captioning.captioning_service import generate_caption, add_subtitles
-from services.hunjian.hunjian_service import concat_audio_list, get_audio_and_video_list, get_audio_and_video_list_local
+from services.hunjian.hunjian_service import concat_audio_list, get_audio_and_video_list, get_audio_and_video_list_local, get_audio_and_video_list_from_mp3
 from services.llm.azure_service import MyAzureService
 from services.llm.baichuan_service import MyBaichuanService
 from services.llm.baidu_qianfan_service import BaiduQianfanService
@@ -194,10 +194,18 @@ def main_generate_video_dubbing():
 def main_generate_video_dubbing_for_mix():
     print("main_generate_video_dubbing_for_mix begin")
     
-    # 统一使用FishAudio服务
-    print("use FishAudio service")
-    audio_service = FishAudioService()
-    audio_output_file_list, video_dir_list = get_audio_and_video_list_local(audio_service)
+    # 检查是否启用完整音频模式
+    use_full_audio = st.session_state.get("use_full_audio", False)
+    
+    if use_full_audio:
+        print("使用完整音频模式")
+        audio_output_file_list, video_dir_list = get_audio_and_video_list_from_mp3()
+        print("完整音频模式处理完成")
+    else:
+        # 统一使用FishAudio服务
+        print("use FishAudio service")
+        audio_service = FishAudioService()
+        audio_output_file_list, video_dir_list = get_audio_and_video_list_local(audio_service)
     
     st.session_state["audio_output_file_list"] = audio_output_file_list
     st.session_state["video_dir_list"] = video_dir_list
@@ -283,6 +291,8 @@ def main_generate_subtitle():
         random_name = random_with_system_time()
         captioning_output = os.path.join(audio_output_dir, f"{random_name}.srt")
         st.session_state["captioning_output"] = captioning_output
+        
+        # 使用合并后的音频文件生成字幕
         audio_output_file = get_must_session_option("audio_output_file", "请先生成视频对应的语音文件")
         generate_caption()
 
@@ -349,24 +359,49 @@ def main_generate_ai_video_for_mix(video_generator):
             video_dir_list = get_must_session_option("video_dir_list", "请选择视频目录路径")
             audio_file_list = get_must_session_option("audio_output_file_list", "请先生成配音文件列表")
 
+            # 检查是否为完整音频模式
+            is_full_audio_mode = st.session_state.get("full_audio_mode", False)
+            
             video_mix_servie = VideoMixService()
-            # 使用 zip() 函数遍历两个列表并获得配对
-            i = 0
             audio_output_file_list = []
             final_video_file_list = []
-            for video_dir, audio_file in zip(video_dir_list, audio_file_list):
-                print(f"Video Directory: {video_dir}, Audio File: {audio_file}")
-                if i == 0:
-                    matching_videos, total_length = video_mix_servie.match_videos_from_dir(video_dir,
-                                                                                           audio_file, True)
-                else:
-                    matching_videos, total_length = video_mix_servie.match_videos_from_dir(video_dir,
-                                                                                           audio_file, False)
-                i = i + 1
-                audio_output_file_list.append(audio_file)
-                final_video_file_list.extend(matching_videos)
-
-            final_audio_output_file = concat_audio_list(audio_output_file_list)
+            
+            if is_full_audio_mode:
+                # 完整音频模式：使用完整音频匹配所有视频场景
+                print("完整音频模式：使用完整音频匹配所有视频场景")
+                complete_audio_file = audio_file_list[0]  # 完整音频文件
+                audio_output_file_list.append(complete_audio_file)
+                
+                # 将所有视频目录合并处理
+                all_matching_videos = []
+                for i, video_dir in enumerate(video_dir_list):
+                    print(f"处理视频目录 {i+1}/{len(video_dir_list)}: {video_dir}")
+                    # 使用完整音频的部分时长来匹配每个目录的视频
+                    # 这里我们需要新的方法来处理完整音频模式
+                    matching_videos, _ = video_mix_servie.match_videos_from_dir_full_audio(video_dir, complete_audio_file, i == 0)
+                    all_matching_videos.extend(matching_videos)
+                
+                final_video_file_list = all_matching_videos
+                final_audio_output_file = complete_audio_file
+            else:
+                # 普通模式：分段处理
+                # 使用 zip() 函数遍历两个列表并获得配对
+                i = 0
+                for video_dir, audio_file in zip(video_dir_list, audio_file_list):
+                    print(f"Video Directory: {video_dir}, Audio File: {audio_file}")
+                    if i == 0:
+                        matching_videos, total_length = video_mix_servie.match_videos_from_dir(video_dir,
+                                                                                               audio_file, True)
+                    else:
+                        matching_videos, total_length = video_mix_servie.match_videos_from_dir(video_dir,
+                                                                                               audio_file, False)
+                    i = i + 1
+                    audio_output_file_list.append(audio_file)
+                    final_video_file_list.extend(matching_videos)
+                
+                # 普通模式：合并音频片段
+                final_audio_output_file = concat_audio_list(audio_output_file_list)
+            
             st.session_state['audio_output_file'] = final_audio_output_file
             st.write(tr("Generate Video subtitles..."))
             main_generate_subtitle()
