@@ -47,7 +47,7 @@ fancy_text:
     # 主标题样式 (如"Donbukll")
     main_title:
       font_file: "fonts/PingFang.ttc"
-      font_size: 46
+      font_size: 80
       font_color: "white"
       font_style: "italic"
       position:
@@ -70,7 +70,7 @@ fancy_text:
     # 副标题样式 (如"night face mask")  
     sub_title:
       font_file: "fonts/Songti.ttc"
-      font_size: 32
+      font_size: 60
       font_color: "black"
       font_style: "bold"
       position:
@@ -92,19 +92,19 @@ fancy_text:
   # 位置预设（可选择的位置模板）
   position_presets:
     top_center:
-      main_y: 100
-      sub_y: 160
+      main_y: 80
+      sub_y: 200  # 增加间距避免遮挡
     top_left:
-      main_y: 100
-      sub_y: 160
+      main_y: 80
+      sub_y: 200
       main_x: 80
       sub_x: 80
     center:
-      main_y: "center-30"  # 屏幕中心向上偏移30像素
-      sub_y: "center+30"   # 屏幕中心向下偏移30像素
+      main_y: "center-60"  # 屏幕中心向上偏移60像素
+      sub_y: "center+60"   # 屏幕中心向下偏移60像素
     bottom_center:
-      main_y: "height-200"
-      sub_y: "height-140"
+      main_y: "height-250"
+      sub_y: "height-120"
   
   # 显示规则
   display_rules:
@@ -129,14 +129,14 @@ fancy_text:
     # 不同分辨率的字体大小调整
     font_scaling:
       "1080x1920":  # 竖屏1080p
-        main_size: 46
-        sub_size: 32
+        main_size: 80
+        sub_size: 60
       "1280x720":   # 横屏720p
-        main_size: 42
-        sub_size: 28
+        main_size: 75
+        sub_size: 55
       "1080x1080":  # 方形1080p
-        main_size: 44
-        sub_size: 30
+        main_size: 80
+        sub_size: 60
     
     # Windows路径处理
     windows_font_path: true

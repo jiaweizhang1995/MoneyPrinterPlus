@@ -78,13 +78,13 @@ class FancyTextService:
             "styles": {
                 "main_title": {
                     "font_file": "fonts/PingFang.ttc",
-                    "font_size": 46,
+                    "font_size": 80,
                     "font_color": "white",
                     "font_style": "italic"
                 },
                 "sub_title": {
                     "font_file": "fonts/Songti.ttc", 
-                    "font_size": 32,
+                    "font_size": 60,
                     "font_color": "black"
                 }
             }
@@ -153,6 +153,17 @@ class FancyTextService:
                 background_config['enable'] = True
                 background_config['color'] = st.session_state.get('fancy_text_bg_color', 'orange')
             
+            # 字体大小设置
+            if 'fancy_text_main_font_size' in st.session_state:
+                main_style['font_size'] = st.session_state.get('fancy_text_main_font_size', 80)
+            
+            if 'fancy_text_sub_font_size' in st.session_state:
+                sub_style['font_size'] = st.session_state.get('fancy_text_sub_font_size', 60)
+            
+            # 开头字幕设置
+            if 'fancy_text_show_at_start' in st.session_state:
+                self.config['show_at_start'] = st.session_state.get('fancy_text_show_at_start', True)
+            
             # 动画设置
             if 'fancy_text_animation' in st.session_state:
                 animation_enabled = st.session_state.get('fancy_text_animation', True)
@@ -176,15 +187,7 @@ class FancyTextService:
         if not self.is_enabled():
             return False
         
-        frequency = self.config.get('frequency', 30)
-        duration = self.config.get('duration', 4)
-        
-        # 计算显示时间点
-        show_intervals = []
-        current_interval = frequency
-        while current_interval + duration < video_duration:
-            show_intervals.append((current_interval, current_interval + duration))
-            current_interval += frequency
+        show_intervals = self.get_display_intervals(video_duration)
         
         # 检查当前时间是否在任何显示区间内
         for start_time, end_time in show_intervals:
@@ -222,7 +225,7 @@ class FancyTextService:
         product_name = self.config.get('product_name', 'wrapping mask')
         return brand_name, product_name
     
-    def get_text_position(self, video_width: int, video_height: int, text_type: str) -> Tuple[str, str]:
+    def get_text_position(self, video_width: int, video_height: int, text_type: str, selected_position_preset: str = None, main_font_size: int = 80) -> Tuple[str, str]:
         """获取文本位置（返回x, y坐标字符串）"""
         styles = self.config.get('styles', {})
         style_config = styles.get(text_type, {})
@@ -232,27 +235,28 @@ class FancyTextService:
         display_rules = self.config.get('display_rules', {})
         use_random_position = display_rules.get('random_position', True)
         
-        if use_random_position:
-            # 使用随机位置预设
+        if use_random_position and selected_position_preset:
+            # 使用传入的位置预设（确保主副标题使用相同位置）
             position_presets = self.config.get('position_presets', {})
-            position_weights = display_rules.get('position_weights', {})
+            preset = position_presets.get(selected_position_preset, {})
             
-            if position_presets and position_weights:
-                # 根据权重选择位置
-                positions = list(position_weights.keys())
-                weights = list(position_weights.values())
-                selected_position = random.choices(positions, weights=weights)[0]
-                preset = position_presets.get(selected_position, {})
-                
-                if text_type == 'main_title':
-                    y_pos = preset.get('main_y', 120)
-                    x_pos = preset.get('main_x', '(w-text_w)/2')
+            if text_type == 'main_title':
+                y_pos = preset.get('main_y', 120)
+                x_pos = preset.get('main_x', '(w-text_w)/2')
+            else:
+                # 副标题位置需要根据主标题字体大小动态调整
+                base_sub_y = preset.get('sub_y', 180)
+                # 根据主标题字体大小增加间距，避免遮挡
+                if isinstance(base_sub_y, int):
+                    # 如果是固定数值，根据字体大小调整
+                    dynamic_spacing = max(main_font_size * 1.2, 100)  # 至少1.2倍字体大小的间距
+                    y_pos = preset.get('main_y', 120) + dynamic_spacing
                 else:
-                    y_pos = preset.get('sub_y', 180)
-                    x_pos = preset.get('sub_x', '(w-text_w)/2')
-                
-                return self._process_position_value(x_pos, video_width, video_height, True), \
-                       self._process_position_value(y_pos, video_width, video_height, False)
+                    y_pos = base_sub_y
+                x_pos = preset.get('sub_x', '(w-text_w)/2')
+            
+            return self._process_position_value(x_pos, video_width, video_height, True), \
+                   self._process_position_value(y_pos, video_width, video_height, False)
         
         # 使用样式配置中的固定位置
         x_pos = position_config.get('x', 'center')
@@ -260,6 +264,18 @@ class FancyTextService:
         
         return self._process_position_value(x_pos, video_width, video_height, True), \
                self._process_position_value(y_pos, video_width, video_height, False)
+    
+    def select_random_position_preset(self) -> str:
+        """选择随机位置预设"""
+        display_rules = self.config.get('display_rules', {})
+        position_weights = display_rules.get('position_weights', {})
+        
+        if position_weights:
+            positions = list(position_weights.keys())
+            weights = list(position_weights.values())
+            return random.choices(positions, weights=weights)[0]
+        
+        return 'top_center'  # 默认位置
     
     def _process_position_value(self, pos_value, video_width: int, video_height: int, is_x: bool) -> str:
         """处理位置数值，转换为FFmpeg可用的表达式"""
@@ -312,6 +328,9 @@ class FancyTextService:
         if not main_text and not sub_text:
             return ""
         
+        # 为这组文本选择统一的位置预设
+        self._current_position_preset = self.select_random_position_preset()
+        
         styles = self.config.get('styles', {})
         filters = []
         
@@ -320,9 +339,15 @@ class FancyTextService:
         font_scaling = self.config.get('compatibility', {}).get('font_scaling', {})
         scale_config = font_scaling.get(resolution_key, {})
         
+        # 计算主标题字体大小，用于副标题间距计算
+        main_style = styles.get('main_title', {})
+        main_font_size = main_style.get('font_size', scale_config.get('main_size', 80))
+        # 主标题最大字体大小限制为85px
+        main_font_size = min(main_font_size, 85)
+        self._current_main_font_size = main_font_size
+        
         # 生成主标题滤镜
         if main_text:
-            main_style = styles.get('main_title', {})
             main_filter = self._generate_single_text_filter(
                 main_text, main_style, video_width, video_height,
                 start_time, duration, 'main_title', scale_config
@@ -347,6 +372,12 @@ class FancyTextService:
                 if sub_filter:
                     filters.append(sub_filter)
         
+        # 清理临时变量
+        if hasattr(self, '_current_position_preset'):
+            delattr(self, '_current_position_preset')
+        if hasattr(self, '_current_main_font_size'):
+            delattr(self, '_current_main_font_size')
+        
         return ','.join(filters) if filters else ""
     
     def _generate_single_text_filter(self, text: str, style_config: Dict, 
@@ -358,16 +389,22 @@ class FancyTextService:
         font_file = style_config.get('font_file', 'fonts/PingFang.ttc')
         font_path = self.get_font_path(font_file)
         
-        # 字体大小（支持分辨率缩放）
+        # 字体大小（优先使用用户设置的大小，但要限制在85px以内）
         if text_type == 'main_title':
-            font_size = scale_config.get('main_size', style_config.get('font_size', 46))
+            font_size = style_config.get('font_size', scale_config.get('main_size', 80))
+            # 主标题最大字体大小限制为85px
+            font_size = min(font_size, 85)
         else:
-            font_size = scale_config.get('sub_size', style_config.get('font_size', 32))
+            font_size = style_config.get('font_size', scale_config.get('sub_size', 60))
+            # 副标题最大字体大小限制为85px
+            font_size = min(font_size, 85)
         
         font_color = style_config.get('font_color', 'white')
         
-        # 获取位置
-        x_pos, y_pos = self.get_text_position(video_width, video_height, text_type)
+        # 获取位置（位置预设由外部传入，确保主副标题使用相同位置）
+        selected_position_preset = getattr(self, '_current_position_preset', None)
+        main_font_size = getattr(self, '_current_main_font_size', 80)
+        x_pos, y_pos = self.get_text_position(video_width, video_height, text_type, selected_position_preset, main_font_size)
         
         # 构建基础drawtext参数
         drawtext_params = [
@@ -429,10 +466,16 @@ class FancyTextService:
         
         frequency = self.config.get('frequency', 30)
         duration = self.config.get('duration', 4)
+        show_at_start = self.config.get('show_at_start', True)
         
         intervals = []
-        current_time = frequency
         
+        # 如果启用开头字幕，在开始时显示
+        if show_at_start and video_duration >= duration:
+            intervals.append((0, duration))
+        
+        # 按频率添加后续显示区间
+        current_time = frequency
         while current_time + duration <= video_duration:
             intervals.append((current_time, current_time + duration))
             current_time += frequency

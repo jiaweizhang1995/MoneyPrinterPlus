@@ -7,7 +7,8 @@
       "Bash(python:*)",
       "Bash(PYTHONPATH=. venv/Scripts/python.exe -m py_compile services/hunjian/hunjian_service.py)",
       "Bash(PYTHONPATH=. venv/Scripts/python.exe -m py_compile main.py)",
-      "Bash(PYTHONPATH=. venv/Scripts/python.exe -m py_compile services/video/video_service.py)"
+      "Bash(PYTHONPATH=. venv/Scripts/python.exe -m py_compile services/video/video_service.py)",
+      "Bash(venv/Scripts/python.exe -m py_compile:*)"
     ],
     "deny": []
   }

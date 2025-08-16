@@ -21,4 +21,5 @@ sensevoice/*
 .DS_Store
 chromedriver/*
 chromedriver-mac-arm64/
+mp3/
 !README.md

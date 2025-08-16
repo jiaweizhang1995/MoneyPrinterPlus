@@ -35,6 +35,9 @@ bash start.sh
 
 # Manual start
 streamlit run gui.py
+
+# Using virtual environment directly (Windows)
+venv/Scripts/python.exe -m streamlit run gui.py
 ```
 
 ### Dependencies
@@ -112,6 +115,10 @@ python -c "from services.video.fancy_text_service import FancyTextService; servi
 
 # Validate configuration
 python -c "from config.config import my_config; print('Config loaded:', my_config is not None)"
+
+# Using virtual environment directly (Windows)
+venv/Scripts/python.exe -c "from tools.video_naming_utils import *; print(generate_daily_video_filename('final'))"
+venv/Scripts/python.exe -c "from services.video.fancy_text_service import FancyTextService; service=FancyTextService(); print('Service loaded:', service.config is not None)"
 ```
 
 ## Advanced Features

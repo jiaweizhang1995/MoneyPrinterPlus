@@ -355,7 +355,7 @@ with fancy_text_container:
                        help="在视频中添加产品名称和卖点的花式文本叠加")
         
         with fancy_columns_1[1]:
-            st.slider(label="显示频率（秒）", min_value=10, value=25, max_value=60, step=5,
+            st.slider(label="显示频率（秒）", min_value=2, value=25, max_value=60, step=1,
                      key="fancy_text_frequency", help="每隔多少秒显示一次文本")
         
         with fancy_columns_1[2]:
@@ -386,23 +386,41 @@ with fancy_text_container:
                 st.checkbox(label="启用动画效果", key="fancy_text_animation", value=True,
                            help="文本显示时使用淡入淡出等动画效果")
             
-            # 第三行：字体和颜色设置
+            # 第三行：字体大小设置
             fancy_columns_3 = st.columns(4)
             with fancy_columns_3[0]:
-                st.color_picker(label="主标题颜色", key="fancy_text_main_color", value="#FFFFFF",
-                               help="主标题文本的颜色")
+                st.slider(label="主标题字体大小", min_value=40, value=80, max_value=85, step=5,
+                         key="fancy_text_main_font_size", help="主标题文本的字体大小（像素）")
             
             with fancy_columns_3[1]:
-                st.color_picker(label="副标题颜色", key="fancy_text_sub_color", value="#000000",
-                               help="副标题文本的颜色")
+                st.slider(label="副标题字体大小", min_value=30, value=60, max_value=85, step=5,
+                         key="fancy_text_sub_font_size", help="副标题文本的字体大小（像素）")
             
             with fancy_columns_3[2]:
-                st.color_picker(label="背景颜色", key="fancy_text_bg_color", value="#FFA500",
-                               help="副标题背景框的颜色")
+                st.checkbox(label="启用开头字幕", key="fancy_text_show_at_start", value=True,
+                           help="在视频开头立即显示一次字幕")
             
             with fancy_columns_3[3]:
                 st.checkbox(label="启用文本阴影", key="fancy_text_shadow", value=True,
                            help="为文本添加阴影效果增强可读性")
+            
+            # 第四行：字体和颜色设置
+            fancy_columns_4 = st.columns(4)
+            with fancy_columns_4[0]:
+                st.color_picker(label="主标题颜色", key="fancy_text_main_color", value="#FFFFFF",
+                               help="主标题文本的颜色")
+            
+            with fancy_columns_4[1]:
+                st.color_picker(label="副标题颜色", key="fancy_text_sub_color", value="#000000",
+                               help="副标题文本的颜色")
+            
+            with fancy_columns_4[2]:
+                st.color_picker(label="背景颜色", key="fancy_text_bg_color", value="#FFA500",
+                               help="副标题背景框的颜色")
+            
+            with fancy_columns_4[3]:
+                # 空列，保持布局平衡
+                st.empty()
             
             # 预览区域
             with st.expander("📱 文本效果预览", expanded=False):

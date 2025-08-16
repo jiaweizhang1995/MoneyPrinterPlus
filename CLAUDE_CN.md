@@ -555,6 +555,9 @@ start.bat
 
 # 手动启动
 streamlit run gui.py
+
+# 使用虚拟环境直接启动 (Windows)
+venv/Scripts/python.exe -m streamlit run gui.py
 ```
 
 ### 测试命令
@@ -567,6 +570,10 @@ python -m pytest tests/test_video_naming_utils.py
 
 # 测试混剪服务
 python -m pytest tests/test_hunjian_service.py
+
+# 使用虚拟环境直接测试 (Windows)
+venv/Scripts/python.exe -c "from services.video.fancy_text_service import FancyTextService; service=FancyTextService(); print('Service loaded:', service.config is not None)"
+venv/Scripts/python.exe -c "from tools.video_naming_utils import generate_daily_video_filename; print('Generated filename:', generate_daily_video_filename('final'))"
 ```
 
 ## 常见问题和解决方案
