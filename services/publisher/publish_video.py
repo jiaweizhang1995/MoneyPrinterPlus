@@ -30,21 +30,13 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
 from services.publisher.publisher_common import init_driver
-from services.publisher.xiaohongshu_publisher import xiaohongshu_publisher
 from services.publisher.douyin_publisher import douyin_publisher
-from services.publisher.kuaishou_publisher import kuaishou_publisher
-from services.publisher.shipinhao_publisher import shipinhao_publisher
-from services.publisher.bilibili_publisher import bilibili_publisher
 from tools.file_utils import write_to_file, list_files, read_head
 from tools.utils import get_must_session_option
 
 last_published_file_name = 'last_published_cn.txt'
 
-all_sites = ['xiaohongshu',
-             'douyin',
-             'kuaishou',
-             'shipinhao',
-             'bilibili',
+all_sites = ['douyin',
              ]
 
 
@@ -71,18 +63,6 @@ def publish_file():
     text_file = get_must_session_option('video_publish_content_text', "请选择要发布的内容文件")
     if st.session_state.get("video_publish_enable_douyin"):
         publish_to_platform('douyin', driver, video_file, text_file)
-
-    if st.session_state.get("video_publish_enable_kuaishou"):
-        publish_to_platform('kuaishou', driver, video_file, text_file)
-
-    if st.session_state.get("video_publish_enable_xiaohongshu"):
-        publish_to_platform('xiaohongshu', driver, video_file, text_file)
-
-    if st.session_state.get("video_publish_enable_shipinhao"):
-        publish_to_platform('shipinhao', driver, video_file, text_file)
-        
-    if st.session_state.get("video_publish_enable_bilibili"):
-        publish_to_platform('bilibili', driver, video_file, text_file)
     
 
 def publish_all():
@@ -128,35 +108,17 @@ def publish_all():
 
         while True:
             print("选择你要发布的平台:\n")
-            print("1. 全部(小红书,抖音,快手,视频号,B站)")
-            print("2. 小红书")
-            print("3. 抖音")
-            print("4. 快手")
-            print("5. 视频号")
-            print("6. B站")
+            print("1. 全部(抖音)")
+            print("2. 抖音")
             print("0. 退出")
 
             choice = input("\n请选择: ")
             print("")
             for file_path, text_path in zip(file_path_list, text_path_list):
                 if choice == "1":
-                    publish_to_platform('xiaohongshu', driver, file_path, text_path)
                     publish_to_platform('douyin', driver, file_path, text_path)
-                    publish_to_platform('kuaishou', driver, file_path, text_path)
-                    publish_to_platform('shipinhao', driver, file_path, text_path)
-                    publish_to_platform('bilibili', driver, file_path, text_path)
                 elif choice == "2":
-                    publish_to_platform('xiaohongshu', driver, file_path, text_path)
-                elif choice == "3":
                     publish_to_platform('douyin', driver, file_path, text_path)
-
-                elif choice == "4":
-                    publish_to_platform('kuaishou', driver, file_path, text_path)
-
-                elif choice == "5":
-                    publish_to_platform('shipinhao', driver, file_path, text_path)
-                elif choice == "6":
-                    publish_to_platform('bilibili', driver, file_path, text_path)
                 else:
                     break
             if choice == "0":

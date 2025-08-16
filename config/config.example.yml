@@ -11,18 +11,6 @@ audio:
     access_key_secret: ACCESS_KEY_SECRET
     app_key: APP_KEY
   provider: Azure
-  local_tts:
-    provider: chatTTS
-    chatTTS:
-      server_location: http://127.0.0.1:8080/
-    GPTSoVITS:
-      server_location: http://127.0.0.1:9880/
-  local_recognition:
-    provider: fasterwhisper
-    fasterwhisper:
-      model_name: tiny
-      device_type: cuda
-      compute_type: int8
 
 
 captioning:
@@ -58,12 +46,6 @@ llm:
     secret_key: YOUR_SK_KEY
     model_name: ERNIE-Bot-turbo
   provider: Moonshot
-resource:
-  pexels:
-    api_key: API_KEY
-  pixabay:
-    api_key: API_KEY
-  provider: pexels
 ui:
   language: zh-CN
 video:
@@ -83,21 +65,9 @@ publisher:
     enable: True
     title_prefix: 标题前缀
     collection: 集合名称
-  kuaishou:
-    enable: True
+  tiktok:
+    enable: False
     title_prefix: 标题前缀
     collection: 集合名称
-    domain:
-      enable: True
-      level1: 教育
-      level2: 语言教育
-  xiaohongshu:
-    enable: True
-    title_prefix: 标题前缀
-    collection: 集合名称
-  shipinhao:
-    enable: True
-    original: False
-    title_prefix: 标题前缀
-    collection: 集合名称
+    status: 待开发
 

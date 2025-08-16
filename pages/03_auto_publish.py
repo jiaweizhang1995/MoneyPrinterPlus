@@ -151,67 +151,6 @@ def set_original(my_type, state_key):
     save_config()
 
 
-def get_enable_kuaishou(my_type):
-    test_config(my_config, "publisher", "kuaishou", my_type)
-    if 'enable' not in my_config['publisher']['kuaishou'][my_type]:
-        # 默认True
-        my_config['publisher']['kuaishou'][my_type]['enable'] = True
-        save_config()
-        return True
-    else:
-        return my_config['publisher']['kuaishou'][my_type]['enable']
-
-def get_enable_bilibili(my_type):
-    test_config(my_config, "publisher", "bilibili", my_type)
-    if 'enable' not in my_config['publisher']['bilibili'][my_type]:
-        # 默认True
-        my_config['publisher']['bilibili'][my_type]['enable'] = True
-        save_config()
-        return True
-    else:
-        return my_config['publisher']['bilibili'][my_type]['enable']
-
-def set_enable_kuaishou(my_type, state_key):
-    use_common = st.session_state.get(state_key)
-    test_config(my_config, "publisher", "kuaishou", my_type)
-    my_config['publisher']['kuaishou'][my_type]['enable'] = use_common
-    save_config()
-
-def set_enable_bilibili(my_type, state_key):
-    use_common = st.session_state.get(state_key)
-    test_config(my_config, "publisher", "bilibili", my_type)
-    my_config['publisher']['bilibili'][my_type]['enable'] = use_common
-    save_config()
-
-def get_kuaishou_value(my_type, kuaishou_key):
-    test_config(my_config, "publisher", "kuaishou", my_type)
-    if kuaishou_key not in my_config['publisher']['kuaishou'][my_type]:
-        # 默认True
-        my_config['publisher']['kuaishou'][my_type][kuaishou_key] = ""
-        save_config()
-        return ''
-    else:
-        return my_config['publisher']['kuaishou'][my_type][kuaishou_key]
-
-def get_bilibili_value(my_type, bilibili_key):
-    test_config(my_config, "publisher", "bilibili", my_type)
-    if bilibili_key not in my_config['publisher']['bilibili'][my_type]:
-        # 默认True
-        my_config['publisher']['bilibili'][my_type][bilibili_key] = ""
-        save_config()
-        return ''
-
-def set_kuaishou_value(my_type, kuaishou_key, state_key):
-    use_common = st.session_state.get(state_key)
-    test_config(my_config, "publisher", "kuaishou", my_type)
-    my_config['publisher']['kuaishou'][my_type][kuaishou_key] = use_common
-    save_config()
-
-def set_bilibili_value(my_type, bilibili_key, state_key):
-    use_common = st.session_state.get(state_key)
-    test_config(my_config, "publisher", "bilibili", my_type)
-    my_config['publisher']['bilibili'][my_type][bilibili_key] = use_common
-    save_config()
 
 def get_title_prefix(my_type):
     test_config(my_config, "publisher", my_type)
@@ -335,108 +274,21 @@ with video_config_container:
             st.text_input(label=tr("Tags"), key="video_publish_douyin_tags",
                           value=get_tags('douyin'), on_change=set_tags,
                           args=('douyin', 'video_publish_douyin_tags'))
-    st.subheader(tr("Kuaishou Config"))
-    st.checkbox(label=tr("Enable kuaishou"), key="video_publish_enable_kuaishou",
-                value=get_enable('kuaishou'), on_change=set_enable,
-                args=('kuaishou', 'video_publish_enable_kuaishou'))
+    st.subheader(tr("TikTok Config"))
+    st.info("待开发 (Under Development)")
+    st.checkbox(label=tr("Enable TikTok"), key="video_publish_enable_tiktok",
+                value=False, disabled=True)
     if not st.session_state.get("video_publish_use_common_config"):
         st_columns = st.columns(3)
         with st_columns[0]:
-            st.text_input(label=tr("Title Prefix"), key="video_publish_kuaishou_title_prefix",
-                          value=get_title_prefix('kuaishou'), on_change=set_title_prefix,
-                          args=('kuaishou', 'video_publish_kuaishou_title_prefix'))
+            st.text_input(label=tr("Title Prefix"), key="video_publish_tiktok_title_prefix",
+                          value="", disabled=True)
         with st_columns[1]:
-            st.text_input(label=tr("Collection Name"), key="video_publish_kuaishou_collection_name",
-                          value=get_collection_name('kuaishou'), on_change=set_collection_name,
-                          args=('kuaishou', 'video_publish_kuaishou_collection_name'))
+            st.text_input(label=tr("Collection Name"), key="video_publish_tiktok_collection_name",
+                          value="", disabled=True)
         with st_columns[2]:
-            st.text_input(label=tr("Tags"), key="video_publish_kuaishou_tags",
-                          value=get_tags('kuaishou'), on_change=set_tags,
-                          args=('kuaishou', 'video_publish_kuaishou_tags'))
-    st.checkbox(label=tr("Enable kuaishou domain"), key="video_publish_enable_kuaishou_domain",
-                value=get_enable_kuaishou('domain'), on_change=set_enable_kuaishou,
-                args=('domain', 'video_publish_enable_kuaishou_domain'))
-    st_columns = st.columns(2)
-    with st_columns[0]:
-        st.text_input(label=tr("Domain Level1"), key="video_publish_kuaishou_domain_level1",
-                      value=get_kuaishou_value('domain', 'level1'), on_change=set_kuaishou_value,
-                      args=('domain', 'level1', 'video_publish_kuaishou_domain_level1'))
-    with st_columns[1]:
-        st.text_input(label=tr("Domain Level2"), key="video_publish_kuaishou_domain_level2",
-                      value=get_kuaishou_value('domain', 'level2'), on_change=set_kuaishou_value,
-                      args=('domain', 'level2', 'video_publish_kuaishou_domain_level2'))
-    st.subheader(tr("shipinhao Config"))
-    st.checkbox(label=tr("Enable shipinhao"), key="video_publish_enable_shipinhao",
-                value=get_enable('shipinhao'), on_change=set_enable,
-                args=('shipinhao', 'video_publish_enable_shipinhao'))
-    st.checkbox(label=tr("Enable original"), key="video_publish_shipinhao_enable_original",
-                    value=get_original('shipinhao'), on_change=set_original,
-                    args=('shipinhao', 'video_publish_shipinhao_enable_original'))
-    if not st.session_state.get("video_publish_use_common_config"):
-        st_columns = st.columns(4)
-        with st_columns[0]:
-            st.text_input(label=tr("Title Prefix"), key="video_publish_shipinhao_title_prefix",
-                          value=get_title_prefix('shipinhao'), on_change=set_title_prefix,
-                          args=('shipinhao', 'video_publish_shipinhao_title_prefix'))
-        with st_columns[1]:
-            st.text_input(label=tr("Collection Name"), key="video_publish_shipinhao_collection_name",
-                          value=get_collection_name('shipinhao'), on_change=set_collection_name,
-                          args=('shipinhao', 'video_publish_shipinhao_collection_name'))
-        with st_columns[2]:
-            st.text_input(label=tr("Tags"), key="video_publish_shipinhao_tags",
-                          value=get_tags('shipinhao'), on_change=set_tags,
-                          args=('shipinhao', 'video_publish_shipinhao_tags'))
-
-
-    st.subheader(tr("Xiaohongshu Config"))
-    st.checkbox(label=tr("Enable xiaohongshu"), key="video_publish_enable_xiaohongshu",
-                value=get_enable('xiaohongshu'), on_change=set_enable,
-                args=('xiaohongshu', 'video_publish_enable_xiaohongshu'))
-    if not st.session_state.get("video_publish_use_common_config"):
-        st_columns = st.columns(3)
-        with st_columns[0]:
-            st.text_input(label=tr("Title Prefix"), key="video_publish_xiaohongshu_title_prefix",
-                          value=get_title_prefix('xiaohongshu'), on_change=set_title_prefix,
-                          args=('xiaohongshu', 'video_publish_xiaohongshu_title_prefix'))
-        with st_columns[1]:
-            st.text_input(label=tr("Collection Name"), key="video_publish_xiaohongshu_collection_name",
-                          value=get_collection_name('xiaohongshu'), on_change=set_collection_name,
-                          args=('xiaohongshu', 'video_publish_xiaohongshu_collection_name'))
-        with st_columns[2]:
-            st.text_input(label=tr("Tags"), key="video_publish_xiaohongshu_tags",
-                          value=get_tags('xiaohongshu'), on_change=set_tags,
-                          args=('xiaohongshu', 'video_publish_xiaohongshu_tags'))
-    
-    st.subheader(tr("Bilibili Config"))
-    st.checkbox(label=tr("Enable bilibili"), key="video_publish_enable_bilibili",
-                value=get_enable('bilibili'), on_change=set_enable,
-                args=('bilibili', 'video_publish_enable_bilibili'))
-    if not st.session_state.get("video_publish_use_common_config"):
-        st_columns = st.columns(3)
-        with st_columns[0]:
-            st.text_input(label=tr("Title Prefix"), key="video_publish_bilibili_title_prefix",
-                          value=get_title_prefix('bilibili'), on_change=set_title_prefix,
-                          args=('bilibili', 'video_publish_xiaohongshu_title_prefix'))
-        with st_columns[1]:
-            st.text_input(label=tr("Collection Name"), key="video_publish_bilibili_collection_name",
-                          value=get_collection_name('bilibili'), on_change=set_collection_name,
-                          args=('bilibili', 'video_publish_bilibili_collection_name'))
-        with st_columns[2]:
-            st.text_input(label=tr("Tags"), key="video_publish_bilibili_tags",
-                          value=get_tags('bilibili'), on_change=set_tags,
-                          args=('bilibili', 'video_publish_bilibili_tags'))
-    st.checkbox(label=tr("Enable bilibili section"), key="video_publish_enable_bilibili_section",
-                value=get_enable_bilibili('section'), on_change=set_enable_bilibili,
-                args=('section', 'video_publish_enable_bilibili_section'))
-    st_columns = st.columns(2)
-    with st_columns[0]:
-        st.text_input(label=tr("Section Level1"), key="video_publish_bilibili_section_level1",
-                      value=get_bilibili_value('section', 'level1'), on_change=set_bilibili_value,
-                      args=('section', 'level1', 'video_publish_bilibili_section_level1'))
-    with st_columns[1]:
-        st.text_input(label=tr("Section Level2"), key="video_publish_bilibili_section_level2",
-                      value=get_bilibili_value('section', 'level2'), on_change=set_bilibili_value,
-                      args=('section', 'level2', 'video_publish_bilibili_section_level2'))
+            st.text_input(label=tr("Tags"), key="video_publish_tiktok_tags",
+                          value="", disabled=True)
 
 st.warning(tr("Click the test button, one new page will be opened, if not, that means your config has some error."))
 st.button(label=tr("Test Publish"), type="primary", on_click=test_publish_video)
