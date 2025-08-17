@@ -241,8 +241,15 @@ class VideoMergeService:
 
     def generate_video_with_bg_music(self):
         # 生成视频和音频的代码
-        merge_video = generate_prefixed_video_filename(video_output_dir, "merge")
-        temp_video_filelist_path = os.path.join(video_output_dir, 'generate_video_with_bg_file_list.txt')
+        # 检查是否有自定义输出目录
+        custom_output_dir = st.session_state.get("custom_video_output_dir")
+        if custom_output_dir and os.path.exists(custom_output_dir):
+            output_dir = custom_output_dir
+        else:
+            output_dir = video_output_dir
+            
+        merge_video = generate_prefixed_video_filename(output_dir, "merge")
+        temp_video_filelist_path = os.path.join(output_dir, 'generate_video_with_bg_file_list.txt')
 
         # 创建包含所有视频文件的文本文件
         with open(temp_video_filelist_path, 'w') as f:

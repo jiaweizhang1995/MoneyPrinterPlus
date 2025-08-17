@@ -94,8 +94,6 @@ def more_scene_fragment(video_scene_container):
                 if not st.session_state.get("use_full_audio", False):
                     st.text_input(label=tr("Video Scene Text"), placeholder=tr("Please input video scene text path"),
                                   key="video_scene_text_" + str(k + 2))
-                else:
-                    st.info("📝 已启用完整音频模式，无需输入文案路径")
 
 
 def generate_video_for_mix(video_generator):
@@ -145,8 +143,6 @@ with mix_video_container:
             st.text_input(label=tr("Video Scene Text"), placeholder=tr("Please input video scene text path"),
                           help=tr("One Line Text For One Scene,UTF-8 encoding"),
                           key="video_scene_text_" + str(1))
-        else:
-            st.info("📝 已启用完整音频模式，无需输入文案路径")
     more_scene_fragment(video_scene_container)
     st_columns = st.columns(2)
     with st_columns[0]:
@@ -206,14 +202,6 @@ with captioning_container:
         st.caption("🔧 当前使用模型: ALLE (高质量多语言TTS模型)")
         st.caption("📝 支持从文案文件随机选取文本进行语音合成")
 
-recognition_container = st.container(border=True)
-with recognition_container:
-    # 配音
-    st.subheader(tr("Audio recognition"))
-    llm_columns = st.columns(4)
-    with llm_columns[0]:
-        st.selectbox(label=tr("Choose recognition type"), options=audio_types, format_func=lambda x: audio_types.get(x),
-                     key="recognition_audio_type")
 
 # 背景音乐
 bg_music_container = st.container(border=True)
@@ -445,6 +433,26 @@ with fancy_text_container:
                 st.info("💡 提示：文本内容会根据配置文件中的产品信息和优势自动随机选择显示")
     else:
         st.warning("⚠️ 花式文本服务未正确加载，请检查配置文件")
+
+# 输出配置
+output_config_container = st.container(border=True)
+with output_config_container:
+    st.subheader("📁 输出配置")
+    output_columns = st.columns(2)
+    with output_columns[0]:
+        # 获取默认final目录
+        default_final_dir = os.path.join(script_dir, "../final")
+        default_final_dir = os.path.abspath(default_final_dir)
+        
+        st.text_input(
+            label="视频保存目录", 
+            placeholder="请输入视频保存的目录路径",
+            value=default_final_dir,
+            key="custom_video_output_dir",
+            help="指定生成的视频文件保存目录，留空则使用默认的final目录"
+        )
+    with output_columns[1]:
+        st.info("💡 自定义保存目录后，生成的视频将保存到指定位置")
 
 # 生成视频
 video_generator = st.container(border=True)
