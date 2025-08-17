@@ -326,7 +326,7 @@ fancy_text_container = st.container(border=True)
 with fancy_text_container:
     st.subheader("✨ 花式文本叠加")
     
-    # 导入花式文本服务用于预览
+    # 导入花式文本服务用于管理
     try:
         from services.video.fancy_text_service import FancyTextService
         fancy_service = FancyTextService()
@@ -340,7 +340,7 @@ with fancy_text_container:
         fancy_columns_1 = st.columns(4)
         with fancy_columns_1[0]:
             st.checkbox(label="启用花式文本", key="enable_fancy_text", value=False, 
-                       help="在视频中添加产品名称和卖点的花式文本叠加")
+                       help="在视频中添加短语文本叠加")
         
         with fancy_columns_1[1]:
             st.slider(label="显示频率（秒）", min_value=2, value=25, max_value=60, step=1,
@@ -351,38 +351,38 @@ with fancy_text_container:
                      key="fancy_text_duration", help="每次显示文本的持续时间")
         
         with fancy_columns_1[3]:
-            position_options = {"top_center": "顶部居中", "top_left": "顶部左侧", 
-                              "center": "屏幕中央", "bottom_center": "底部居中"}
-            st.selectbox(label="显示位置", key="fancy_text_position", 
-                        options=position_options, format_func=lambda x: position_options[x],
-                        help="选择文本在视频中的显示位置")
+            st.selectbox(label="同时显示条数", key="fancy_text_display_count", 
+                        options=[1, 2, 3, 4, 5], index=0,
+                        help="选择每次同时显示的短语数量，最多5条")
         
-        # 第二行：样式控制
+        # 第二行：样式控制（仅在启用时显示）
         if st.session_state.get("enable_fancy_text", False):
-            fancy_columns_2 = st.columns(3)
+            fancy_columns_2 = st.columns(4)
             with fancy_columns_2[0]:
-                content_options = {"phrases": "产品短语", "advantages": "产品优势", "mixed": "混合显示"}
-                st.selectbox(label="内容类型", key="fancy_text_content_type",
-                           options=content_options, format_func=lambda x: content_options[x],
-                           help="选择显示的文本内容类型")
+                st.slider(label="字体大小", min_value=40, value=70, max_value=100, step=5,
+                         key="fancy_text_font_size", help="短语文本的字体大小（像素）")
             
             with fancy_columns_2[1]:
+                st.slider(label="行间距", min_value=30, value=50, max_value=80, step=5,
+                         key="fancy_text_line_spacing", help="多行短语之间的间距（像素）")
+            
+            with fancy_columns_2[2]:
                 st.checkbox(label="随机位置", key="fancy_text_random_position", value=True,
                            help="启用后文本位置会在预设位置中随机选择")
             
-            with fancy_columns_2[2]:
+            with fancy_columns_2[3]:
                 st.checkbox(label="启用动画效果", key="fancy_text_animation", value=True,
                            help="文本显示时使用淡入淡出等动画效果")
             
-            # 第三行：字体大小设置
+            # 第三行：颜色设置
             fancy_columns_3 = st.columns(4)
             with fancy_columns_3[0]:
-                st.slider(label="主标题字体大小", min_value=40, value=80, max_value=85, step=5,
-                         key="fancy_text_main_font_size", help="主标题文本的字体大小（像素）")
+                st.color_picker(label="字体颜色", key="fancy_text_font_color", value="#FFFFFF",
+                               help="短语文本的颜色")
             
             with fancy_columns_3[1]:
-                st.slider(label="副标题字体大小", min_value=30, value=60, max_value=85, step=5,
-                         key="fancy_text_sub_font_size", help="副标题文本的字体大小（像素）")
+                st.color_picker(label="背景颜色", key="fancy_text_bg_color", value="#FFA500",
+                               help="短语背景框的颜色")
             
             with fancy_columns_3[2]:
                 st.checkbox(label="启用开头字幕", key="fancy_text_show_at_start", value=True,
@@ -392,45 +392,122 @@ with fancy_text_container:
                 st.checkbox(label="启用文本阴影", key="fancy_text_shadow", value=True,
                            help="为文本添加阴影效果增强可读性")
             
-            # 第四行：字体和颜色设置
-            fancy_columns_4 = st.columns(4)
-            with fancy_columns_4[0]:
-                st.color_picker(label="主标题颜色", key="fancy_text_main_color", value="#FFFFFF",
-                               help="主标题文本的颜色")
+            # 短语文件管理区域
+            st.markdown("---")
+            st.markdown("**📄 短语文件配置**")
             
-            with fancy_columns_4[1]:
-                st.color_picker(label="副标题颜色", key="fancy_text_sub_color", value="#000000",
-                               help="副标题文本的颜色")
+            # 获取默认短语目录
+            default_phrases_dir = os.path.join(script_dir, "../phrases")
+            default_phrases_dir = os.path.abspath(default_phrases_dir)
             
-            with fancy_columns_4[2]:
-                st.color_picker(label="背景颜色", key="fancy_text_bg_color", value="#FFA500",
-                               help="副标题背景框的颜色")
+            phrases_col1, phrases_col2 = st.columns([2, 1])
             
-            with fancy_columns_4[3]:
-                # 空列，保持布局平衡
-                st.empty()
+            with phrases_col1:
+                # 短语文件目录
+                st.text_input(
+                    label="短语文件目录", 
+                    placeholder="请输入包含txt短语文件的目录路径",
+                    value=default_phrases_dir,
+                    key="fancy_text_phrases_dir",
+                    help="选择包含短语txt文件的目录"
+                )
             
-            # 预览区域
-            with st.expander("📱 文本效果预览", expanded=False):
-                preview_col1, preview_col2 = st.columns(2)
+            with phrases_col2:
+                # 从目录获取txt文件列表
+                phrases_file_list = get_file_map_from_dir(
+                    st.session_state.get("fancy_text_phrases_dir", ""), 
+                    ".txt"
+                )
                 
-                with preview_col1:
-                    st.markdown("**主标题样式预览:**")
-                    main_preview = fancy_service.preview_text_style('main_title')
-                    sample_main, sample_sub = main_preview.get('sample_text', ('Donbukll', 'wrapping mask'))
+                # 短语文件选择器
+                st.selectbox(
+                    label="选择短语文件", 
+                    options=phrases_file_list, 
+                    format_func=lambda x: phrases_file_list[x] if phrases_file_list else "无文件",
+                    key="fancy_text_phrases_file",
+                    help="选择包含短语的txt文件（每行一个短语）"
+                )
+            
+            # 文件内容预览和信息
+            if st.session_state.get("fancy_text_phrases_file"):
+                file_path = st.session_state.get("fancy_text_phrases_file")
+                current_phrases = fancy_service.get_phrases_list()
+                
+                col1, col2 = st.columns([2, 1])
+                with col1:
+                    st.info(f"📁 当前文件: {os.path.basename(file_path)}")
+                    st.info(f"📝 短语数量: {len(current_phrases)} 条")
+                
+                with col2:
+                    st.empty()
+                
+                # 文件内容预览
+                with st.expander("📖 文件内容预览", expanded=False):
+                    if current_phrases:
+                        for i, phrase in enumerate(current_phrases, 1):
+                            st.text(f"{i}. {phrase}")
+                    else:
+                        st.warning("文件为空或无法读取")
+                
+                # 样式效果预览
+                with st.expander("👀 短语效果预览", expanded=False):
+                    if current_phrases:
+                        # 预览设置
+                        preview_col1, preview_col2 = st.columns([1, 2])
+                        with preview_col1:
+                            preview_count = st.slider(
+                                label="预览条数", 
+                                min_value=1, 
+                                max_value=min(len(current_phrases), 10), 
+                                value=min(3, len(current_phrases)),
+                                key="fancy_text_preview_count",
+                                help="设置预览显示的短语数量"
+                            )
+                        
+                        with preview_col2:
+                            st.info(f"📊 显示前 {preview_count} 条短语预览")
+                        
+                        font_color = st.session_state.get('fancy_text_font_color', '#FFFFFF')
+                        bg_color = st.session_state.get('fancy_text_bg_color', '#FFA500')
+                        
+                        st.markdown("**样式预览：**")
+                        # 显示用户自定义条数的短语
+                        for phrase in current_phrases[:preview_count]:
+                            st.markdown(
+                                f'<p style="font-size: 24px; color: {font_color}; background-color: {bg_color}; '
+                                f'padding: 10px 15px; margin: 5px 0; border-radius: 8px; display: inline-block; '
+                                f'text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">{phrase}</p>', 
+                                unsafe_allow_html=True
+                            )
+                        
+                        display_count = st.session_state.get('fancy_text_display_count', 1)
+                        st.info(f"💡 提示：视频中将每次从 {len(current_phrases)} 条短语中随机显示 {display_count} 条")
+                    else:
+                        st.warning("请选择有效的短语文件以查看预览效果")
+            else:
+                st.info("🔍 请选择短语文件目录和文件以开始使用")
+                
+                # 显示文件格式说明
+                with st.expander("📋 文件格式说明", expanded=True):
+                    st.markdown("""
+                    **文件要求：**
+                    - 文件格式：纯文本(.txt)
+                    - 文件编码：UTF-8
+                    - 内容格式：每行一个短语
                     
-                    main_color = st.session_state.get('fancy_text_main_color', '#FFFFFF')
-                    st.markdown(f'<p style="font-size: 28px; color: {main_color}; font-style: italic; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">{sample_main}</p>', 
-                               unsafe_allow_html=True)
-                
-                with preview_col2:
-                    st.markdown("**副标题样式预览:**")
-                    sub_color = st.session_state.get('fancy_text_sub_color', '#000000')
-                    bg_color = st.session_state.get('fancy_text_bg_color', '#FFA500')
-                    st.markdown(f'<p style="font-size: 20px; color: {sub_color}; background-color: {bg_color}; padding: 8px 12px; border-radius: 6px; display: inline-block;">{sample_sub}</p>', 
-                               unsafe_allow_html=True)
-                
-                st.info("💡 提示：文本内容会根据配置文件中的产品信息和优势自动随机选择显示")
+                    **示例内容：**
+                    ```
+                    Deep Moisturizing Care
+                    Natural Organic Formula
+                    24 Hour Lasting Effect
+                    Anti-Aging Collagen Boost
+                    Professional Skincare Solution
+                    ```
+                    
+                    **提示：** 
+                    - 项目已提供示例文件在 `phrases/` 目录下
+                    - 您可以创建自己的txt文件来管理短语
+                    """)
     else:
         st.warning("⚠️ 花式文本服务未正确加载，请检查配置文件")
 

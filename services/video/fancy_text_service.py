@@ -69,23 +69,30 @@ class FancyTextService:
             "enable": True,
             "frequency": 30,
             "duration": 4,
-            "product_name": "Donbukll wrapping mask",
-            "brand_name": "Donbukll",
-            "phrases": [
-                {"main": "Donbukll", "sub": "wrapping mask"},
-                {"main": "Premium", "sub": "skincare solution"}
+            "display_count": 1,
+            "default_phrases": [
+                "Deep Moisturizing Care",
+                "Natural Organic Formula", 
+                "24 Hour Lasting Effect",
+                "Anti-Aging Collagen Boost",
+                "Professional Skincare Solution"
             ],
-            "styles": {
-                "main_title": {
-                    "font_file": "fonts/PingFang.ttc",
-                    "font_size": 80,
-                    "font_color": "white",
-                    "font_style": "italic"
+            "phrase_style": {
+                "font_file": "fonts/PingFang.ttc",
+                "font_size": 70,
+                "font_color": "white",
+                "font_style": "bold",
+                "line_spacing": 50,
+                "shadow": {
+                    "enable": True,
+                    "color": "black",
+                    "offset_x": 3,
+                    "offset_y": 3
                 },
-                "sub_title": {
-                    "font_file": "fonts/Songti.ttc", 
-                    "font_size": 60,
-                    "font_color": "black"
+                "background": {
+                    "enable": True,
+                    "color": "orange",
+                    "padding": 15
                 }
             }
         }
@@ -111,54 +118,34 @@ class FancyTextService:
             if 'fancy_text_duration' in st.session_state:
                 self.config['duration'] = st.session_state.get('fancy_text_duration', 4)
             
-            # 内容类型设置
-            if 'fancy_text_content_type' in st.session_state:
-                content_type = st.session_state.get('fancy_text_content_type', 'mixed')
-                display_rules = self.config.setdefault('display_rules', {})
-                
-                if content_type == 'phrases':
-                    display_rules['phrase_weight'] = 100
-                    display_rules['advantage_weight'] = 0
-                elif content_type == 'advantages':
-                    display_rules['phrase_weight'] = 0
-                    display_rules['advantage_weight'] = 100
-                else:  # mixed
-                    display_rules['phrase_weight'] = 70
-                    display_rules['advantage_weight'] = 30
+            if 'fancy_text_display_count' in st.session_state:
+                self.config['display_count'] = st.session_state.get('fancy_text_display_count', 1)
             
             # 位置设置
             if 'fancy_text_random_position' in st.session_state:
                 display_rules = self.config.setdefault('display_rules', {})
                 display_rules['random_position'] = st.session_state.get('fancy_text_random_position', True)
             
-            # 颜色设置
-            styles = self.config.setdefault('styles', {})
+            # 短语样式设置
+            phrase_style = self.config.setdefault('phrase_style', {})
             
-            # 主标题样式
-            main_style = styles.setdefault('main_title', {})
-            if 'fancy_text_main_color' in st.session_state:
-                main_style['font_color'] = st.session_state.get('fancy_text_main_color', 'white')
+            if 'fancy_text_font_color' in st.session_state:
+                phrase_style['font_color'] = st.session_state.get('fancy_text_font_color', 'white')
+            
+            if 'fancy_text_font_size' in st.session_state:
+                phrase_style['font_size'] = st.session_state.get('fancy_text_font_size', 70)
+            
+            if 'fancy_text_line_spacing' in st.session_state:
+                phrase_style['line_spacing'] = st.session_state.get('fancy_text_line_spacing', 50)
             
             if 'fancy_text_shadow' in st.session_state:
-                shadow_config = main_style.setdefault('shadow', {})
+                shadow_config = phrase_style.setdefault('shadow', {})
                 shadow_config['enable'] = st.session_state.get('fancy_text_shadow', True)
             
-            # 副标题样式
-            sub_style = styles.setdefault('sub_title', {})
-            if 'fancy_text_sub_color' in st.session_state:
-                sub_style['font_color'] = st.session_state.get('fancy_text_sub_color', 'black')
-            
             if 'fancy_text_bg_color' in st.session_state:
-                background_config = sub_style.setdefault('background', {})
+                background_config = phrase_style.setdefault('background', {})
                 background_config['enable'] = True
                 background_config['color'] = st.session_state.get('fancy_text_bg_color', 'orange')
-            
-            # 字体大小设置
-            if 'fancy_text_main_font_size' in st.session_state:
-                main_style['font_size'] = st.session_state.get('fancy_text_main_font_size', 80)
-            
-            if 'fancy_text_sub_font_size' in st.session_state:
-                sub_style['font_size'] = st.session_state.get('fancy_text_sub_font_size', 60)
             
             # 开头字幕设置
             if 'fancy_text_show_at_start' in st.session_state:
@@ -168,12 +155,9 @@ class FancyTextService:
             if 'fancy_text_animation' in st.session_state:
                 animation_enabled = st.session_state.get('fancy_text_animation', True)
                 if not animation_enabled:
-                    # 禁用动画效果
-                    main_style.setdefault('animation', {})['type'] = 'none'
-                    sub_style.setdefault('animation', {})['type'] = 'none'
                     self.config['fade_duration'] = 0
             
-            print(f"UI配置合并完成，频率: {self.config.get('frequency')}秒，时长: {self.config.get('duration')}秒")
+            print(f"UI配置合并完成，频率: {self.config.get('frequency')}秒，时长: {self.config.get('duration')}秒，显示条数: {self.config.get('display_count')}")
             
         except Exception as e:
             print(f"合并UI配置时发生错误: {e}")
@@ -196,71 +180,83 @@ class FancyTextService:
         
         return False
     
-    def get_text_content(self) -> Tuple[str, str]:
-        """获取要显示的文本内容（主标题，副标题）"""
-        display_rules = self.config.get('display_rules', {})
-        phrase_weight = display_rules.get('phrase_weight', 70)
-        advantage_weight = display_rules.get('advantage_weight', 30)
+    def get_phrases_from_file(self) -> List[str]:
+        """从选择的txt文件中读取短语列表"""
+        file_path = st.session_state.get('fancy_text_phrases_file', '')
         
-        # 根据权重随机选择显示内容类型
-        if random.randint(1, 100) <= phrase_weight:
-            # 显示短语组合
-            phrases = self.config.get('phrases', [])
-            if phrases:
-                selected_phrase = random.choice(phrases)
-                return selected_phrase.get('main', ''), selected_phrase.get('sub', '')
-        else:
-            # 显示产品优势
-            advantages = self.config.get('advantages', [])
-            if advantages:
-                selected_advantage = random.choice(advantages)
-                if len(selected_advantage) >= 2:
-                    # 随机组合优势文本
-                    main_text = selected_advantage[0]
-                    sub_text = ' '.join(selected_advantage[1:2])
-                    return main_text, sub_text
+        if not file_path or not os.path.exists(file_path):
+            return self.config.get('default_phrases', [
+                "Deep Moisturizing Care",
+                "Natural Organic Formula", 
+                "24 Hour Lasting Effect",
+                "Anti-Aging Collagen Boost",
+                "Professional Skincare Solution"
+            ])
         
-        # 默认返回品牌名称
-        brand_name = self.config.get('brand_name', 'Donbukll')
-        product_name = self.config.get('product_name', 'wrapping mask')
-        return brand_name, product_name
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                phrases = [line.strip() for line in f if line.strip()]
+            return phrases if phrases else self.config.get('default_phrases', [])
+        except Exception as e:
+            print(f"读取短语文件失败: {e}")
+            return self.config.get('default_phrases', [])
+
+    def get_phrases_list(self) -> List[str]:
+        """获取当前可用的短语列表（优先从文件读取）"""
+        return self.get_phrases_from_file()
     
-    def get_text_position(self, video_width: int, video_height: int, text_type: str, selected_position_preset: str = None, main_font_size: int = 80) -> Tuple[str, str]:
-        """获取文本位置（返回x, y坐标字符串）"""
-        styles = self.config.get('styles', {})
-        style_config = styles.get(text_type, {})
-        position_config = style_config.get('position', {})
+    def get_display_phrases(self) -> List[str]:
+        """获取本次要显示的短语列表"""
+        all_phrases = self.get_phrases_list()
+        if not all_phrases:
+            return ["No phrases available"]
+        
+        display_count = self.config.get('display_count', 1)
+        display_count = min(display_count, len(all_phrases), 5)  # 最多5条
+        
+        # 随机选择短语
+        return random.sample(all_phrases, display_count)
+    
+    
+    def get_phrases_position(self, video_width: int, video_height: int, phrase_count: int, selected_position_preset: str = None) -> Tuple[str, str]:
+        """获取短语显示位置（返回起始x, y坐标字符串）"""
+        phrase_style = self.config.get('phrase_style', {})
+        position_config = phrase_style.get('position', {})
         
         # 获取显示规则配置
         display_rules = self.config.get('display_rules', {})
         use_random_position = display_rules.get('random_position', True)
         
         if use_random_position and selected_position_preset:
-            # 使用传入的位置预设（确保主副标题使用相同位置）
+            # 使用位置预设
             position_presets = self.config.get('position_presets', {})
             preset = position_presets.get(selected_position_preset, {})
-            
-            if text_type == 'main_title':
-                y_pos = preset.get('main_y', 120)
-                x_pos = preset.get('main_x', '(w-text_w)/2')
-            else:
-                # 副标题位置需要根据主标题字体大小动态调整
-                base_sub_y = preset.get('sub_y', 180)
-                # 根据主标题字体大小增加间距，避免遮挡
-                if isinstance(base_sub_y, int):
-                    # 如果是固定数值，根据字体大小调整
-                    dynamic_spacing = max(main_font_size * 1.2, 100)  # 至少1.2倍字体大小的间距
-                    y_pos = preset.get('main_y', 120) + dynamic_spacing
-                else:
-                    y_pos = base_sub_y
-                x_pos = preset.get('sub_x', '(w-text_w)/2')
-            
-            return self._process_position_value(x_pos, video_width, video_height, True), \
-                   self._process_position_value(y_pos, video_width, video_height, False)
+            x_pos = preset.get('x', 'center')
+            y_pos = preset.get('y', 'center')
+        else:
+            # 使用样式配置中的固定位置
+            x_pos = position_config.get('x', 'center')
+            y_pos = position_config.get('y', 'center')
         
-        # 使用样式配置中的固定位置
-        x_pos = position_config.get('x', 'center')
-        y_pos = position_config.get('y', 120 if text_type == 'main_title' else 180)
+        # 如果是多行显示，调整起始Y位置以确保居中
+        if phrase_count > 1:
+            line_spacing = phrase_style.get('line_spacing', 50)
+            font_size = phrase_style.get('font_size', 70)
+            
+            # 计算总高度
+            total_height = phrase_count * font_size + (phrase_count - 1) * line_spacing
+            
+            # 调整Y位置以居中显示
+            if y_pos == 'center':
+                y_pos = f'(h-{total_height})/2'
+            elif isinstance(y_pos, str) and 'center' in y_pos:
+                # 处理 "center-60" 这样的格式
+                offset = 0
+                if '+' in y_pos:
+                    offset = int(y_pos.split('+')[1])
+                elif '-' in y_pos:
+                    offset = -int(y_pos.split('-')[1])
+                y_pos = f'(h-{total_height})/2{offset:+d}'
         
         return self._process_position_value(x_pos, video_width, video_height, True), \
                self._process_position_value(y_pos, video_width, video_height, False)
@@ -321,99 +317,73 @@ class FancyTextService:
         
         return font_path
     
-    def generate_drawtext_filter(self, main_text: str, sub_text: str, 
+    def generate_drawtext_filter(self, phrases: List[str], 
                                video_width: int, video_height: int,
                                start_time: float, duration: float) -> str:
-        """生成FFmpeg的drawtext滤镜字符串"""
-        if not main_text and not sub_text:
+        """生成FFmpeg的drawtext滤镜字符串（支持多行短语）"""
+        if not phrases:
             return ""
         
-        # 为这组文本选择统一的位置预设
+        # 为这组短语选择统一的位置预设
         self._current_position_preset = self.select_random_position_preset()
-        
-        styles = self.config.get('styles', {})
-        filters = []
         
         # 调整字体大小适配不同分辨率
         resolution_key = f"{video_width}x{video_height}"
         font_scaling = self.config.get('compatibility', {}).get('font_scaling', {})
         scale_config = font_scaling.get(resolution_key, {})
         
-        # 计算主标题字体大小，用于副标题间距计算
-        main_style = styles.get('main_title', {})
-        main_font_size = main_style.get('font_size', scale_config.get('main_size', 80))
-        # 主标题最大字体大小限制为85px
-        main_font_size = min(main_font_size, 85)
-        self._current_main_font_size = main_font_size
+        phrase_style = self.config.get('phrase_style', {})
+        filters = []
         
-        # 生成主标题滤镜
-        if main_text:
-            main_filter = self._generate_single_text_filter(
-                main_text, main_style, video_width, video_height,
-                start_time, duration, 'main_title', scale_config
+        # 获取起始位置
+        start_x, start_y = self.get_phrases_position(video_width, video_height, len(phrases), self._current_position_preset)
+        
+        # 为每个短语生成滤镜
+        for i, phrase in enumerate(phrases):
+            phrase_filter = self._generate_phrase_filter(
+                phrase, phrase_style, video_width, video_height,
+                start_time, duration, scale_config, start_x, start_y, i
             )
-            if main_filter:
-                filters.append(main_filter)
-        
-        # 生成副标题滤镜
-        if sub_text:
-            sub_style = styles.get('sub_title', {})
-            # 副标题可能有延迟显示
-            animation_config = sub_style.get('animation', {})
-            delay = animation_config.get('delay', 0)
-            sub_start_time = start_time + delay
-            sub_duration = duration - delay
-            
-            if sub_duration > 0:
-                sub_filter = self._generate_single_text_filter(
-                    sub_text, sub_style, video_width, video_height,
-                    sub_start_time, sub_duration, 'sub_title', scale_config
-                )
-                if sub_filter:
-                    filters.append(sub_filter)
+            if phrase_filter:
+                filters.append(phrase_filter)
         
         # 清理临时变量
         if hasattr(self, '_current_position_preset'):
             delattr(self, '_current_position_preset')
-        if hasattr(self, '_current_main_font_size'):
-            delattr(self, '_current_main_font_size')
         
         return ','.join(filters) if filters else ""
     
-    def _generate_single_text_filter(self, text: str, style_config: Dict, 
-                                   video_width: int, video_height: int,
-                                   start_time: float, duration: float,
-                                   text_type: str, scale_config: Dict) -> str:
-        """生成单个文本的drawtext滤镜"""
+    def _generate_phrase_filter(self, phrase: str, phrase_style: Dict, 
+                              video_width: int, video_height: int,
+                              start_time: float, duration: float,
+                              scale_config: Dict, start_x: str, start_y: str, line_index: int) -> str:
+        """生成单个短语的drawtext滤镜"""
         # 基础配置
-        font_file = style_config.get('font_file', 'fonts/PingFang.ttc')
+        font_file = phrase_style.get('font_file', 'fonts/PingFang.ttc')
         font_path = self.get_font_path(font_file)
         
-        # 字体大小（优先使用用户设置的大小，但要限制在85px以内）
-        if text_type == 'main_title':
-            font_size = style_config.get('font_size', scale_config.get('main_size', 80))
-            # 主标题最大字体大小限制为85px
-            font_size = min(font_size, 85)
-        else:
-            font_size = style_config.get('font_size', scale_config.get('sub_size', 60))
-            # 副标题最大字体大小限制为85px
-            font_size = min(font_size, 85)
+        # 字体大小（优先使用分辨率适配的大小）
+        font_size = scale_config.get('font_size', phrase_style.get('font_size', 70))
+        font_color = phrase_style.get('font_color', 'white')
         
-        font_color = style_config.get('font_color', 'white')
-        
-        # 获取位置（位置预设由外部传入，确保主副标题使用相同位置）
-        selected_position_preset = getattr(self, '_current_position_preset', None)
-        main_font_size = getattr(self, '_current_main_font_size', 80)
-        x_pos, y_pos = self.get_text_position(video_width, video_height, text_type, selected_position_preset, main_font_size)
+        # 计算当前行的Y位置
+        line_spacing = scale_config.get('line_spacing', phrase_style.get('line_spacing', 50))
+        current_y = start_y
+        if line_index > 0:
+            # 如果start_y是表达式，需要特殊处理
+            if '(' in start_y:
+                current_y = f"{start_y}+{line_index * (font_size + line_spacing)}"
+            else:
+                current_y = f"{start_y}+{line_index * (font_size + line_spacing)}"
         
         # 构建基础drawtext参数
         drawtext_params = [
             f"fontfile={font_path}",
-            f"text='{text}'",
+            f"text='{phrase}'",
             f"fontsize={font_size}",
             f"fontcolor={font_color}",
-            f"x={x_pos}",
-            f"y={y_pos}"
+            f"x={start_x}",
+            f"y={current_y}"
         ]
         
         # 添加时间控制
@@ -421,15 +391,19 @@ class FancyTextService:
         end_time = start_time + duration
         
         # 淡入淡出效果
-        alpha_expression = f"if(lt(t,{start_time}),0,if(lt(t,{start_time + fade_duration}),(t-{start_time})/{fade_duration},if(lt(t,{end_time - fade_duration}),1,if(lt(t,{end_time}),({end_time}-t)/{fade_duration},0))))"
-        drawtext_params.append(f"alpha='{alpha_expression}'")
+        if fade_duration > 0:
+            alpha_expression = f"if(lt(t,{start_time}),0,if(lt(t,{start_time + fade_duration}),(t-{start_time})/{fade_duration},if(lt(t,{end_time - fade_duration}),1,if(lt(t,{end_time}),({end_time}-t)/{fade_duration},0))))"
+            drawtext_params.append(f"alpha='{alpha_expression}'")
+        else:
+            # 无动画效果，直接显示
+            drawtext_params.append(f"enable='between(t,{start_time},{end_time})'")
         
         # 阴影效果
-        shadow_config = style_config.get('shadow', {})
+        shadow_config = phrase_style.get('shadow', {})
         if shadow_config.get('enable', False):
             shadow_color = shadow_config.get('color', 'black')
-            shadow_x = shadow_config.get('offset_x', 2)
-            shadow_y = shadow_config.get('offset_y', 2)
+            shadow_x = shadow_config.get('offset_x', 3)
+            shadow_y = shadow_config.get('offset_y', 3)
             drawtext_params.extend([
                 f"shadowcolor={shadow_color}",
                 f"shadowx={shadow_x}",
@@ -437,9 +411,9 @@ class FancyTextService:
             ])
         
         # 描边效果
-        outline_config = style_config.get('outline', {})
+        outline_config = phrase_style.get('outline', {})
         if outline_config.get('enable', False):
-            outline_color = outline_config.get('color', 'black')
+            outline_color = outline_config.get('color', 'gray')
             outline_width = outline_config.get('width', 1)
             drawtext_params.extend([
                 f"bordercolor={outline_color}",
@@ -447,10 +421,10 @@ class FancyTextService:
             ])
         
         # 背景框效果
-        background_config = style_config.get('background', {})
+        background_config = phrase_style.get('background', {})
         if background_config.get('enable', False):
             bg_color = background_config.get('color', 'orange')
-            bg_padding = background_config.get('padding', 10)
+            bg_padding = background_config.get('padding', 15)
             drawtext_params.extend([
                 "box=1",
                 f"boxcolor={bg_color}",
@@ -484,7 +458,7 @@ class FancyTextService:
     
     def generate_complete_filter_complex(self, video_duration: float, 
                                        video_width: int, video_height: int) -> str:
-        """生成完整的filter_complex字符串，包含所有时间区间的文本"""
+        """生成完整的filter_complex字符串，包含所有时间区间的短语"""
         if not self.is_enabled():
             return ""
         
@@ -496,10 +470,10 @@ class FancyTextService:
         
         for start_time, end_time in intervals:
             duration = end_time - start_time
-            main_text, sub_text = self.get_text_content()
+            phrases = self.get_display_phrases()
             
             filter_text = self.generate_drawtext_filter(
-                main_text, sub_text, video_width, video_height,
+                phrases, video_width, video_height,
                 start_time, duration
             )
             
@@ -508,16 +482,15 @@ class FancyTextService:
         
         return ','.join(all_filters) if all_filters else ""
     
-    def preview_text_style(self, text_type: str = 'main_title') -> Dict:
-        """获取文本样式预览信息"""
-        styles = self.config.get('styles', {})
-        style_config = styles.get(text_type, {})
+    def preview_phrase_style(self) -> Dict:
+        """获取短语样式预览信息"""
+        phrase_style = self.config.get('phrase_style', {})
         
         return {
-            'font_size': style_config.get('font_size', 46),
-            'font_color': style_config.get('font_color', 'white'),
-            'background_enabled': style_config.get('background', {}).get('enable', False),
-            'background_color': style_config.get('background', {}).get('color', 'orange'),
-            'shadow_enabled': style_config.get('shadow', {}).get('enable', False),
-            'sample_text': self.get_text_content()
+            'font_size': phrase_style.get('font_size', 70),
+            'font_color': phrase_style.get('font_color', 'white'),
+            'background_enabled': phrase_style.get('background', {}).get('enable', False),
+            'background_color': phrase_style.get('background', {}).get('color', 'orange'),
+            'shadow_enabled': phrase_style.get('shadow', {}).get('enable', False),
+            'sample_phrases': self.get_phrases_list()[:3] if self.get_phrases_list() else ["Sample Phrase"]
         }
