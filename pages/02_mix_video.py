@@ -120,18 +120,15 @@ with mix_video_container:
     full_audio_container = st.container(border=True)
     with full_audio_container:
         st.subheader("🎵 完整音频配置")
-        audio_columns = st.columns(2)
-        with audio_columns[0]:
-            use_full_audio = st.checkbox(label="是否使用完整音频", 
-                                       key="use_full_audio", 
-                                       value=False,
-                                       help="启用后将跳过TTS语音合成，直接使用MP3音频文件")
-        with audio_columns[1]:
-            if use_full_audio:
-                st.text_input(label="音频文件目录", 
-                            placeholder="请输入包含MP3文件的目录路径",
-                            key="full_audio_dir",
-                            help="系统将从此目录随机选择MP3文件作为配音")
+        use_full_audio = st.checkbox(label="是否使用完整音频", 
+                                   key="use_full_audio", 
+                                   value=False,
+                                   help="启用后将跳过TTS语音合成，直接使用MP3音频文件")
+        if use_full_audio:
+            st.text_input(label="音频文件目录", 
+                        placeholder="请输入包含MP3文件的目录路径",
+                        key="full_audio_dir",
+                        help="系统将从此目录随机选择MP3文件作为配音")
     
     video_scene_container = st.container(border=True)
     with video_scene_container:
@@ -161,7 +158,6 @@ with captioning_container:
     # 检查是否启用完整音频模式
     if st.session_state.get("use_full_audio", False):
         st.warning("⚠️ 已启用完整音频模式，将跳过TTS语音合成流程")
-        st.info("🎵 系统将直接使用MP3音频文件进行配音，无需配置语音合成参数")
     else:
         # FishAudio 配置
         st.info("🐟 使用 Fish Audio 高质量语音合成服务，基于ALLE模型")
@@ -321,10 +317,10 @@ with subtitle_container:
         st.slider(label=tr("subtitle border width"), min_value=0, value=0, max_value=4, step=1,
                   key="subtitle_border_width")
 
-# 花式文本叠加
+# 产品短语弹幕
 fancy_text_container = st.container(border=True)
 with fancy_text_container:
-    st.subheader("✨ 花式文本叠加")
+    st.subheader("✨ 产品短语弹幕")
     
     # 导入花式文本服务用于管理
     try:
@@ -332,14 +328,14 @@ with fancy_text_container:
         fancy_service = FancyTextService()
         config_loaded = True
     except Exception as e:
-        st.error(f"加载花式文本服务失败: {e}")
+        st.error(f"加载产品短语弹幕服务失败: {e}")
         config_loaded = False
     
     if config_loaded:
         # 第一行：基础控制
         fancy_columns_1 = st.columns(4)
         with fancy_columns_1[0]:
-            st.checkbox(label="启用花式文本", key="enable_fancy_text", value=False, 
+            st.checkbox(label="启用产品短语弹幕", key="enable_fancy_text", value=False, 
                        help="在视频中添加短语文本叠加")
         
         with fancy_columns_1[1]:
@@ -509,7 +505,7 @@ with fancy_text_container:
                     - 您可以创建自己的txt文件来管理短语
                     """)
     else:
-        st.warning("⚠️ 花式文本服务未正确加载，请检查配置文件")
+        st.warning("⚠️ 产品短语弹幕服务未正确加载，请检查配置文件")
 
 # 输出配置
 output_config_container = st.container(border=True)
@@ -540,4 +536,5 @@ with video_generator:
               args=(video_generator,))
 result_video_file = st.session_state.get("result_video_file")
 if result_video_file:
-    st.video(result_video_file)
+    st.success(f"视频生成完成！文件保存位置: {result_video_file}")
+    st.info("视频已保存到目标目录，可以直接使用。")

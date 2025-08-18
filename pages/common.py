@@ -46,6 +46,7 @@ def common_ui():
                        })
 
     st.sidebar.page_link("gui.py", label=tr("Base Config"))
+    st.sidebar.page_link("pages/04_ai_copywriting.py", label=tr("AI Copywriting"))
     st.sidebar.page_link("pages/02_mix_video.py", label=tr("Mix Video"))
     st.sidebar.page_link("pages/03_auto_publish.py", label=tr("Video Auto Publish"))
     # st.sidebar.markdown(
