@@ -392,37 +392,18 @@ with fancy_text_container:
             st.markdown("---")
             st.markdown("**📄 短语文件配置**")
             
-            # 获取默认短语目录
-            default_phrases_dir = os.path.join(script_dir, "../phrases")
-            default_phrases_dir = os.path.abspath(default_phrases_dir)
+            # 获取默认短语文件
+            default_phrases_file = os.path.join(script_dir, "../phrases/default_phrases.txt")
+            default_phrases_file = os.path.abspath(default_phrases_file)
             
-            phrases_col1, phrases_col2 = st.columns([2, 1])
-            
-            with phrases_col1:
-                # 短语文件目录
-                st.text_input(
-                    label="短语文件目录", 
-                    placeholder="请输入包含txt短语文件的目录路径",
-                    value=default_phrases_dir,
-                    key="fancy_text_phrases_dir",
-                    help="选择包含短语txt文件的目录"
-                )
-            
-            with phrases_col2:
-                # 从目录获取txt文件列表
-                phrases_file_list = get_file_map_from_dir(
-                    st.session_state.get("fancy_text_phrases_dir", ""), 
-                    ".txt"
-                )
-                
-                # 短语文件选择器
-                st.selectbox(
-                    label="选择短语文件", 
-                    options=phrases_file_list, 
-                    format_func=lambda x: phrases_file_list[x] if phrases_file_list else "无文件",
-                    key="fancy_text_phrases_file",
-                    help="选择包含短语的txt文件（每行一个短语）"
-                )
+            # 短语文件路径输入
+            st.text_input(
+                label="短语文件路径", 
+                placeholder="请输入txt短语文件的完整路径",
+                value=default_phrases_file if os.path.exists(default_phrases_file) else "",
+                key="fancy_text_phrases_file",
+                help="选择包含短语的txt文件（每行一个短语）"
+            )
             
             # 文件内容预览和信息
             if st.session_state.get("fancy_text_phrases_file"):
@@ -481,7 +462,7 @@ with fancy_text_container:
                     else:
                         st.warning("请选择有效的短语文件以查看预览效果")
             else:
-                st.info("🔍 请选择短语文件目录和文件以开始使用")
+                st.info("🔍 请输入短语文件路径以开始使用")
                 
                 # 显示文件格式说明
                 with st.expander("📋 文件格式说明", expanded=True):
