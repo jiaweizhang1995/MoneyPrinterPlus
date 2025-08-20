@@ -1,0 +1,28 @@
+# 视频使用配置文件
+# 用于配置视频混剪时的使用限制，防止同一视频过度使用导致平台限流
+
+video_usage:
+  # 是否启用视频使用次数限制
+  enable: true
+  
+  # 单个视频文件的最大使用次数
+  # 超过此次数的视频将不再被选择用于混剪
+  max_usage_count: 3
+  
+  # 是否在选择视频时优先使用次数较少的视频
+  prefer_less_used: true
+  
+  # 使用记录存储文件名（相对于config目录）
+  records_file: "video_usage_records.json"
+  
+  # 警告阈值：当可用视频文件数量低于此百分比时显示警告
+  # 例如：0.2 表示当可用视频少于总视频数的20%时显示警告
+  warning_threshold: 0.2
+  
+  # 自动清理配置
+  auto_cleanup:
+    # 是否启用自动清理过期记录
+    enable: false
+    
+    # 记录保留天数（超过此天数未使用的记录将被清理）
+    retention_days: 30

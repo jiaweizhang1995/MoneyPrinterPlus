@@ -538,3 +538,141 @@ result_video_file = st.session_state.get("result_video_file")
 if result_video_file:
     st.success(f"视频生成完成！文件保存位置: {result_video_file}")
     st.info("视频已保存到目标目录，可以直接使用。")
+
+# 视频使用统计管理区域
+video_usage_container = st.container(border=True)
+with video_usage_container:
+    st.markdown(f"### 📊 {tr('Video Usage Statistics')}")
+    
+    try:
+        from tools.video_usage_tracker import get_video_usage_tracker
+        
+        tracker = get_video_usage_tracker()
+        stats = tracker.get_usage_statistics()
+        
+        # 统计信息展示
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric(
+                label="总文件数",
+                value=stats['total_files']
+            )
+        
+        with col2:
+            st.metric(
+                label="可用文件数", 
+                value=stats['available_files'],
+                delta=f"-{stats['exceeded_files']}" if stats['exceeded_files'] > 0 else None,
+                help="未达到使用上限的视频文件数量"
+            )
+        
+        with col3:
+            st.metric(
+                label="已达上限文件数",
+                value=stats['exceeded_files'],
+                delta_color="inverse",
+                help="已达到最大使用次数的视频文件数量"
+            )
+        
+        with col4:
+            st.metric(
+                label="最大使用次数",
+                value=stats['max_usage']
+            )
+        
+        # 使用分布图表
+        if stats['usage_distribution'] and stats['total_files'] > 0:
+            st.markdown("#### 📈 使用次数分布")
+            usage_data = []
+            for count, files in stats['usage_distribution'].items():
+                usage_data.append({"使用次数": count, "文件数量": files})
+            
+            if usage_data:
+                st.bar_chart(
+                    data={row["使用次数"]: row["文件数量"] for row in usage_data},
+                    height=200
+                )
+        
+        # 详细记录展示
+        if stats['total_files'] > 0:
+            with st.expander("📋 详细使用记录", expanded=False):
+                records = tracker.get_detailed_records()
+                
+                if records:
+                    # 显示前20条记录
+                    display_records = records[:20]
+                    
+                    st.markdown(f"显示前 {len(display_records)} 条记录（共 {len(records)} 条）")
+                    
+                    for i, record in enumerate(display_records, 1):
+                        file_name = os.path.basename(record['file_path'])
+                        status_icon = "🚫" if record['exceeded'] else "✅"
+                        
+                        st.markdown(
+                            f"{i}. {status_icon} **{file_name}** - "
+                            f"使用次数: {record['count']}/{stats['max_usage']} - "
+                            f"最后使用: {record['last_used'] or '未知'}"
+                        )
+                else:
+                    st.info("暂无使用记录")
+        
+        # 管理操作
+        st.markdown("#### 🛠️ 管理操作")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            if st.button("🔄 刷新统计", help="重新加载使用统计信息"):
+                st.rerun()
+        
+        with col2:
+            has_records = stats['total_files'] > 0
+            if st.button("🧹 重置所有记录", help="清除所有视频使用记录" if has_records else "暂无记录可重置", disabled=not has_records):
+                if has_records:
+                    if st.session_state.get('confirm_reset_usage', False):
+                        tracker.reset_usage_records()
+                        st.success("已重置所有视频使用记录！")
+                        st.session_state['confirm_reset_usage'] = False
+                        st.rerun()
+                    else:
+                        st.session_state['confirm_reset_usage'] = True
+                        st.warning("⚠️ 请再次点击确认重置操作")
+        
+        with col3:
+            # 导出记录
+            has_records = stats['total_files'] > 0
+            if st.button("📤 导出记录", help="导出使用记录到文件" if has_records else "暂无记录可导出", disabled=not has_records):
+                if has_records:
+                    import json
+                    from datetime import datetime
+                    
+                    export_data = {
+                        'export_time': datetime.now().isoformat(),
+                        'statistics': stats,
+                        'records': records
+                    }
+                    
+                    export_filename = f"video_usage_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                    
+                    st.download_button(
+                        label="⬇️ 下载记录文件",
+                        data=json.dumps(export_data, ensure_ascii=False, indent=2),
+                        file_name=export_filename,
+                        mime="application/json"
+                    )
+        
+        # 警告提示
+        if stats['total_files'] > 0:
+            if stats['available_files'] == 0:
+                st.error("⚠️ 警告：所有视频文件都已达到使用上限！建议重置使用记录或添加新的视频素材。")
+            else:
+                available_ratio = stats['available_files'] / stats['total_files']
+                if available_ratio < 0.3:  # 30%阈值
+                    st.warning(f"⚠️ 注意：可用视频文件较少（{available_ratio:.1%}），建议考虑重置部分使用记录。")
+        elif stats['total_files'] == 0:
+            st.info("📝 提示：暂无视频使用记录。开始生成视频后，系统将自动记录视频文件的使用情况。")
+    
+    except Exception as e:
+        st.error(f"加载视频使用统计时出错：{str(e)}")
+        st.info("请确保视频使用追踪器已正确配置。")

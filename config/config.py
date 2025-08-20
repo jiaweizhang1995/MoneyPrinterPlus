@@ -289,10 +289,12 @@ script_dir = os.path.dirname(script_path)
 config_example_file_name = "config.example.yml"
 config_file_name = "config.yml"
 session_file_name = "session.yml"
+video_usage_config_file_name = "video_usage_config.yml"
 
 config_example_file = os.path.join(script_dir, config_example_file_name)
 config_file = os.path.join(script_dir, config_file_name)
 session_file = os.path.join(script_dir, session_file_name)
+video_usage_config_file = os.path.join(script_dir, video_usage_config_file_name)
 exclude_keys = ['01_first_visit', '02_first_visit', '03_first_visit', '04_first_visit','reference_audio','audio_temperature','audio_voice']
 
 
@@ -341,6 +343,31 @@ def load_config():
         return read_yaml(config_file)
 
 
+def load_video_usage_config():
+    """
+    加载视频使用配置文件
+    """
+    print("load_video_usage_config")
+    if os.path.exists(video_usage_config_file):
+        return read_yaml(video_usage_config_file)
+    else:
+        # 返回默认配置
+        print("视频使用配置文件不存在，使用默认配置")
+        return {
+            'video_usage': {
+                'enable': True,
+                'max_usage_count': 3,
+                'prefer_less_used': True,
+                'records_file': 'video_usage_records.json',
+                'warning_threshold': 0.2,
+                'auto_cleanup': {
+                    'enable': False,
+                    'retention_days': 30
+                }
+            }
+        }
+
+
 def test_config(todo_config, *args):
     temp_config = todo_config
     for arg in args:
@@ -372,6 +399,7 @@ def fetch_CosyVoice_voice():
     
 
 my_config = load_config()
+video_usage_config = load_video_usage_config()
 
 # 调用外部接口并更新 CosyVoice_voice
 CosyVoice_voice = fetch_CosyVoice_voice() or CosyVoice_voice  # 如果外部接口失败，则保留原有数据

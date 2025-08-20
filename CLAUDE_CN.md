@@ -106,6 +106,7 @@ class FancyTextService:
 7. **最终输出**: 生成带日期序号的视频文件
 
 #### 关键代码位置
+
 ```python
 # services/hunjian/hunjian_service.py
 def generate_video(self, params):

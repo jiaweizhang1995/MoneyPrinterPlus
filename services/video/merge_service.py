@@ -38,6 +38,7 @@ from tools.file_utils import generate_temp_filename
 from tools.tr_utils import tr
 from tools.utils import run_ffmpeg_command, random_with_system_time
 from tools.video_naming_utils import generate_prefixed_video_filename
+from tools.video_usage_tracker import get_video_usage_tracker
 
 # 获取当前脚本的绝对路径
 script_path = os.path.abspath(__file__)
@@ -136,16 +137,42 @@ def random_video_from_dir(video_dir):
     media_files = [os.path.join(video_dir, f) for f in os.listdir(video_dir) if
                    f.lower().endswith(('.jpg', '.jpeg', '.png', '.mp4', '.mov'))]
 
-    # 随机排序媒体文件
-    random.shuffle(media_files)
+    # 获取视频使用追踪器
+    tracker = get_video_usage_tracker()
+    
+    # 过滤可用的媒体文件（未超过使用限制的）
+    available_media_files = tracker.filter_available_videos(media_files)
+    
+    if not available_media_files:
+        print("警告：没有可用的媒体文件，所有文件都已达到使用上限")
+        st.toast(tr("No available video files, all files have reached usage limit"), icon="⚠️")
+        # 如果没有可用文件，使用原始逻辑（允许超限使用）
+        available_media_files = media_files
+        print("回退到原始选择逻辑")
+
+    # 按使用次数排序，优先选择使用次数少的文件
+    sorted_media_files = tracker.get_least_used_videos(available_media_files)
+    
+    # 随机排序媒体文件（在同等使用次数的文件中随机）
+    random.shuffle(sorted_media_files)
 
     # 确保有视频文件在列表中
-    video_files = [os.path.join(video_dir, f) for f in media_files if f.lower().endswith(('.mp4', '.mov'))]
+    video_files = [f for f in sorted_media_files if f.lower().endswith(('.mp4', '.mov'))]
     if video_files:
-        # 从视频文件中随机选择一个
-        random_video = random.choice(video_files)
+        # 优先选择使用次数最少的视频文件
+        least_used_videos = tracker.get_least_used_videos(video_files, 1)
+        if least_used_videos:
+            random_video = least_used_videos[0]
+        else:
+            # 如果没有可用视频，从所有视频中随机选择
+            random_video = random.choice(video_files)
     else:
-        random_video = random.choice(media_files)
+        # 如果没有视频文件，从所有媒体文件中选择
+        random_video = random.choice(sorted_media_files)
+    
+    # 记录视频使用次数
+    tracker.record_usage(random_video)
+    
     return random_video
 
 
