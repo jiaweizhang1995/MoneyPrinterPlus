@@ -24,6 +24,8 @@
 import os
 import subprocess
 import tempfile
+import random
+import time
 from pathlib import Path
 import streamlit as st
 
@@ -38,74 +40,140 @@ common_ui()
 
 st.markdown(f"<h1 style='text-align: center; font-weight:bold; font-family:comic sans ms; padding-top: 0rem;'> \
             {app_title}</h1>", unsafe_allow_html=True)
-st.markdown("<h2 style='text-align: center;padding-top: 0rem;'>视频处理</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;padding-top: 0rem;'>去重处理</h2>", unsafe_allow_html=True)
 
 
-def trim_video_with_ffmpeg(input_file, output_file, start_time, end_time):
+def generate_deduplication_params():
     """
-    使用FFmpeg剪辑视频
+    生成TikTok去重处理的随机参数
+    """
+    # 使用当前时间戳作为种子确保每次都不同
+    random.seed(int(time.time() * 1000) % 10000)
+    
+    params = {
+        # 放大倍数 (5%-15%随机放大)
+        'zoom_factor': round(random.uniform(1.05, 1.15), 3),
+        
+        # 镜像翻转概率 (50%概率)
+        'apply_flip': random.choice([True, False]),
+        
+        # 裁切偏移 (-5%到+5%随机偏移)
+        'crop_offset_x': round(random.uniform(-0.05, 0.05), 3),
+        'crop_offset_y': round(random.uniform(-0.05, 0.05), 3),
+        
+        # 像素噪声强度
+        'noise_strength': random.randint(1, 3),
+        
+        # 时间戳随机偏移 (毫秒)
+        'timestamp_offset': random.randint(1, 100)
+    }
+    
+    return params
+
+
+def apply_tiktok_deduplication_filter(zoom_factor, apply_flip, crop_offset_x, crop_offset_y, 
+                                    noise_strength, timestamp_offset):
+    """
+    生成TikTok去重处理的FFmpeg滤镜链 - 简化版本
+    """
+    filters = []
+    
+    # 1. 镜像翻转 (如果启用) - 最简单的去重方式
+    if apply_flip:
+        filters.append("hflip")
+    
+    # 2. 轻微放大+裁切 (保持视频流畅)
+    filters.append(f"scale=iw*{zoom_factor}:ih*{zoom_factor}")
+    filters.append("crop=iw*0.95:ih*0.95:(iw-ow)/2:(ih-oh)/2")
+    
+    # 3. 轻微亮度调整改变MD5
+    brightness_adj = 0.02 + (noise_strength * 0.01)  # 2%-5%亮度调整
+    filters.append(f"eq=brightness={brightness_adj}")
+    
+    return ",".join(filters)
+
+
+def trim_video_with_ffmpeg(input_file, output_file, start_time, end_time, enable_deduplication=True):
+    """
+    使用FFmpeg剪辑视频，支持TikTok去重处理
     """
     try:
         duration = end_time - start_time
         
-        # 方法1：使用重新编码确保兼容性，移除音频
+        # 构建基础FFmpeg命令
         cmd = [
             'ffmpeg',
             '-i', input_file,
             '-ss', str(start_time),
-            '-t', str(duration),  # 使用持续时间
-            '-c:v', 'libx264',    # 视频编码器
-            '-an',                # 移除音频轨道
-            '-preset', 'fast',     # 编码速度预设
-            '-crf', '23',         # 质量控制
-            '-pix_fmt', 'yuv420p', # 像素格式，确保兼容性
-            '-movflags', '+faststart',  # 优化MP4播放
-            output_file,
-            '-y'  # 覆盖输出文件
+            '-t', str(duration),
+            '-c:v', 'libx264',
+            '-an',  # 移除音频轨道
+            '-preset', 'fast',
+            '-crf', '23',
+            '-pix_fmt', 'yuv420p',
+            '-movflags', '+faststart'
         ]
         
-        try:
-            # 使用项目现有的FFmpeg执行函数
-            run_ffmpeg_command(cmd)
-            return True, tr("Video trimming completed successfully")
-        except Exception as first_error:
-            # 如果第一种方法失败，尝试复制流方法
-            st.warning(tr("First method failed, trying alternative approach..."))
+        # 如果启用去重处理，添加滤镜
+        if enable_deduplication:
+            # 生成随机去重参数
+            dedup_params = generate_deduplication_params()
             
-            cmd_copy = [
+            # 显示去重处理信息
+            flip_text = tr("Yes") if dedup_params['apply_flip'] else tr("No")
+            st.info(f"""
+            {tr("Applying TikTok deduplication")}:
+            - {tr("Zoom factor")}: {dedup_params['zoom_factor']}x
+            - {tr("Mirror flip")}: {flip_text}
+            - {tr("Crop offset")}: X{dedup_params['crop_offset_x']:.2f}, Y{dedup_params['crop_offset_y']:.2f}
+            """)
+            
+            # 生成去重滤镜链
+            dedup_filter = apply_tiktok_deduplication_filter(
+                dedup_params['zoom_factor'],
+                dedup_params['apply_flip'],
+                dedup_params['crop_offset_x'],
+                dedup_params['crop_offset_y'],
+                dedup_params['noise_strength'],
+                dedup_params['timestamp_offset']
+            )
+            
+            # 添加滤镜到命令
+            cmd.extend(['-vf', dedup_filter])
+        
+        # 添加输出文件和覆盖选项
+        cmd.extend([output_file, '-y'])
+        
+        try:
+            # 执行FFmpeg命令
+            run_ffmpeg_command(cmd)
+            
+            success_msg = tr("Video trimming completed successfully")
+            if enable_deduplication:
+                success_msg += " " + tr("with anti-detection processing")
+            
+            return True, success_msg
+            
+        except Exception as first_error:
+            # 如果第一种方法失败，尝试不使用去重的简单方法
+            st.warning(tr("Deduplication failed, trying without anti-detection..."))
+            
+            cmd_simple = [
                 'ffmpeg',
-                '-ss', str(start_time),  # 在输入前指定开始时间，更快
+                '-ss', str(start_time),
                 '-i', input_file,
                 '-t', str(duration),
-                '-c:v', 'copy',  # 复制视频流
-                '-an',           # 移除音频
-                '-avoid_negative_ts', 'make_zero',
-                output_file + '.temp',
-                '-y'
-            ]
-            
-            run_ffmpeg_command(cmd_copy)
-            
-            # 如果复制成功，重新编码确保兼容性
-            cmd_reencode = [
-                'ffmpeg',
-                '-i', output_file + '.temp',
                 '-c:v', 'libx264',
-                '-an',           # 移除音频
+                '-an',
+                '-preset', 'fast',
+                '-crf', '23',
                 '-pix_fmt', 'yuv420p',
                 output_file,
                 '-y'
             ]
             
-            run_ffmpeg_command(cmd_reencode)
-            
-            # 删除临时文件
-            try:
-                os.unlink(output_file + '.temp')
-            except:
-                pass
-                
-            return True, tr("Video trimming completed successfully")
+            run_ffmpeg_command(cmd_simple)
+            return True, tr("Video trimming completed successfully") + " " + tr("(without anti-detection)")
         
     except Exception as e:
         return False, f"{tr('Processing error')}: {str(e)}"
@@ -174,6 +242,19 @@ if uploaded_file is not None:
         key="output_filename"
     )
     
+    # TikTok去重处理选项
+    st.subheader(tr("Anti-Detection Settings"))
+    
+    enable_deduplication = st.checkbox(
+        tr("Enable TikTok Deduplication"),
+        value=True,
+        help=tr("Apply anti-detection processing to avoid content detection"),
+        key="enable_deduplication"
+    )
+    
+    if enable_deduplication:
+        st.info(tr("Video will be processed with mirror flip, zoom crop, and noise to avoid detection"))
+    
     # 验证时间设置
     if start_time >= end_time:
         st.error(tr("Start time must be less than end time"))
@@ -196,8 +277,12 @@ if uploaded_file is not None:
             
             try:
                 # 显示处理进度
-                with st.spinner(tr("Trimming video, please wait...")):
-                    success, message = trim_video_with_ffmpeg(temp_input_path, output_path, start_time, end_time)
+                progress_text = tr("Trimming video, please wait...")
+                if enable_deduplication:
+                    progress_text += " " + tr("(with anti-detection processing)")
+                
+                with st.spinner(progress_text):
+                    success, message = trim_video_with_ffmpeg(temp_input_path, output_path, start_time, end_time, enable_deduplication)
                 
                 # 显示结果
                 if success:
