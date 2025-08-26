@@ -358,6 +358,21 @@ def main_generate_ai_video_for_mix(video_generator):
             st.write(tr("Video normalize..."))
             video_dir_list = get_must_session_option("video_dir_list", "请选择视频目录路径")
             audio_file_list = get_must_session_option("audio_output_file_list", "请先生成配音文件列表")
+            
+            # 检查是否有足够的可用视频文件
+            from tools.video_usage_tracker import get_video_usage_tracker
+            tracker = get_video_usage_tracker()
+            stats = tracker.get_usage_statistics()
+            
+            if stats['available_files'] == 0 and stats['total_files'] > 0:
+                st.error("⚠️ 所有视频文件都已达到使用上限！无法生成新视频。")
+                st.info("解决方案：")
+                st.markdown("1. 点击下方'重置所有记录'按钮重置使用记录")
+                st.markdown("2. 或者添加新的视频素材到视频目录中")
+                st.stop()
+            elif stats['total_files'] == 0:
+                st.error("⚠️ 未找到任何视频文件！请检查视频目录配置。")
+                st.stop()
 
             # 检查是否为完整音频模式
             is_full_audio_mode = st.session_state.get("full_audio_mode", False)
@@ -366,41 +381,50 @@ def main_generate_ai_video_for_mix(video_generator):
             audio_output_file_list = []
             final_video_file_list = []
             
-            if is_full_audio_mode:
-                # 完整音频模式：使用完整音频匹配所有视频场景
-                print("完整音频模式：使用完整音频匹配所有视频场景")
-                complete_audio_file = audio_file_list[0]  # 完整音频文件
-                audio_output_file_list.append(complete_audio_file)
-                
-                # 将所有视频目录合并处理
-                all_matching_videos = []
-                for i, video_dir in enumerate(video_dir_list):
-                    print(f"处理视频目录 {i+1}/{len(video_dir_list)}: {video_dir}")
-                    # 使用完整音频的部分时长来匹配每个目录的视频
-                    # 这里我们需要新的方法来处理完整音频模式
-                    matching_videos, _ = video_mix_servie.match_videos_from_dir_full_audio(video_dir, complete_audio_file, i == 0)
-                    all_matching_videos.extend(matching_videos)
-                
-                final_video_file_list = all_matching_videos
-                final_audio_output_file = complete_audio_file
-            else:
-                # 普通模式：分段处理
-                # 使用 zip() 函数遍历两个列表并获得配对
-                i = 0
-                for video_dir, audio_file in zip(video_dir_list, audio_file_list):
-                    print(f"Video Directory: {video_dir}, Audio File: {audio_file}")
-                    if i == 0:
-                        matching_videos, total_length = video_mix_servie.match_videos_from_dir(video_dir,
-                                                                                               audio_file, True)
-                    else:
-                        matching_videos, total_length = video_mix_servie.match_videos_from_dir(video_dir,
-                                                                                               audio_file, False)
-                    i = i + 1
-                    audio_output_file_list.append(audio_file)
-                    final_video_file_list.extend(matching_videos)
-                
-                # 普通模式：合并音频片段
-                final_audio_output_file = concat_audio_list(audio_output_file_list)
+            try:
+                if is_full_audio_mode:
+                    # 完整音频模式：使用完整音频匹配所有视频场景
+                    print("完整音频模式：使用完整音频匹配所有视频场景")
+                    complete_audio_file = audio_file_list[0]  # 完整音频文件
+                    audio_output_file_list.append(complete_audio_file)
+                    
+                    # 将所有视频目录合并处理
+                    all_matching_videos = []
+                    for i, video_dir in enumerate(video_dir_list):
+                        print(f"处理视频目录 {i+1}/{len(video_dir_list)}: {video_dir}")
+                        # 使用完整音频的部分时长来匹配每个目录的视频
+                        # 这里我们需要新的方法来处理完整音频模式
+                        matching_videos, _ = video_mix_servie.match_videos_from_dir_full_audio(video_dir, complete_audio_file, i == 0)
+                        all_matching_videos.extend(matching_videos)
+                    
+                    final_video_file_list = all_matching_videos
+                    final_audio_output_file = complete_audio_file
+                else:
+                    # 普通模式：分段处理
+                    # 使用 zip() 函数遍历两个列表并获得配对
+                    i = 0
+                    for video_dir, audio_file in zip(video_dir_list, audio_file_list):
+                        print(f"Video Directory: {video_dir}, Audio File: {audio_file}")
+                        if i == 0:
+                            matching_videos, total_length = video_mix_servie.match_videos_from_dir(video_dir,
+                                                                                                   audio_file, True)
+                        else:
+                            matching_videos, total_length = video_mix_servie.match_videos_from_dir(video_dir,
+                                                                                                   audio_file, False)
+                        i = i + 1
+                        audio_output_file_list.append(audio_file)
+                        final_video_file_list.extend(matching_videos)
+                    
+                    # 普通模式：合并音频片段
+                    final_audio_output_file = concat_audio_list(audio_output_file_list)
+            except ValueError as e:
+                # 处理视频使用限制异常
+                st.error(f"❌ 视频处理失败: {str(e)}")
+                st.warning("💡 建议操作:")
+                st.markdown("• 前往页面底部的'视频使用统计管理'区域")
+                st.markdown("• 点击'重置所有记录'按钮清空使用记录")
+                st.markdown("• 或者向视频目录中添加更多素材文件")
+                st.stop()
             
             st.session_state['audio_output_file'] = final_audio_output_file
             st.write(tr("Generate Video subtitles..."))

@@ -297,10 +297,13 @@ class VideoMixService:
         
         if not available_media_files:
             print("警告：没有可用的媒体文件，所有文件都已达到使用上限")
-            st.toast(tr("No available video files, all files have reached usage limit"), icon="⚠️")
-            # 如果没有可用文件，使用原始逻辑（允许超限使用）
-            available_media_files = media_files
-            print("回退到原始选择逻辑")
+            st.error("⚠️ 当前视频目录中所有文件都已达到使用上限！")
+            st.info("解决方案：")
+            st.markdown("1. 重置视频使用记录")
+            st.markdown("2. 添加新的视频素材到目录中")
+            st.markdown("3. 增加最大使用次数限制")
+            # 抛出异常而不是继续处理
+            raise ValueError("所有视频文件都已达到使用上限，无法继续处理")
 
         # 按使用次数排序，优先选择使用次数少的文件
         media_files = tracker.get_least_used_videos(available_media_files)
@@ -395,11 +398,14 @@ class VideoMixService:
         available_media_files = tracker.filter_available_videos(media_files)
         
         if not available_media_files:
-            print("警告：没有可用的媒体文件，所有文件都已达到使用上限")
-            st.toast(tr("No available video files, all files have reached usage limit"), icon="⚠️")
-            # 如果没有可用文件，使用原始逻辑（允许超限使用）
-            available_media_files = media_files
-            print("回退到原始选择逻辑")
+            print("警告：完整音频模式下没有可用的媒体文件，所有文件都已达到使用上限")
+            st.error("⚠️ 当前视频目录中所有文件都已达到使用上限！")
+            st.info("解决方案：")
+            st.markdown("1. 重置视频使用记录")
+            st.markdown("2. 添加新的视频素材到目录中")
+            st.markdown("3. 增加最大使用次数限制")
+            # 抛出异常而不是继续处理
+            raise ValueError("所有视频文件都已达到使用上限，无法继续处理")
 
         # 按使用次数排序，优先选择使用次数少的文件
         media_files = tracker.get_least_used_videos(available_media_files)
