@@ -8,6 +8,7 @@ MoneyPrinterPlus is a Python-based AI video generation and publishing tool that 
 - Generate AI-powered short videos with text-to-speech and automatic subtitle generation
 - Batch mix and merge videos using local resources
 - Automatically publish videos to multiple platforms (抖音/Douyin, 快手/Kuaishou, 小红书/Xiaohongshu, 视频号/WeChat Channels, B站/Bilibili)
+- Process video deduplication for TikTok anti-detection
 
 The application is built using Streamlit for the web interface and integrates with various AI services for content generation, voice synthesis, and video processing.
 
@@ -40,6 +41,22 @@ streamlit run gui.py
 venv/Scripts/python.exe -m streamlit run gui.py
 ```
 
+### Testing Commands
+```bash
+# Test video naming functionality
+python -c "from tools.video_naming_utils import *; print(generate_daily_video_filename('final'))"
+
+# Test fancy text service
+python -c "from services.video.fancy_text_service import FancyTextService; service=FancyTextService(); print('Service loaded:', service.config is not None)"
+
+# Validate configuration
+python -c "from config.config import my_config; print('Config loaded:', my_config is not None)"
+
+# Using virtual environment directly (Windows)
+venv/Scripts/python.exe -c "from tools.video_naming_utils import *; print(generate_daily_video_filename('final'))"
+venv/Scripts/python.exe -c "from services.video.fancy_text_service import FancyTextService; service=FancyTextService(); print('Service loaded:', service.config is not None)"
+```
+
 ### Dependencies
 - Python 3.10 or 3.11 required
 - FFmpeg 6.1.1+ required (must be in PATH)
@@ -56,38 +73,51 @@ venv/Scripts/python.exe -m streamlit run gui.py
 - **tools/**: Utility functions and helpers
 
 ### Key Service Domains
-- **services/audio/**: Text-to-speech and speech recognition (Azure, Ali, Tencent, ChatTTS, GPT-SoVITS, CosyVoice)
+- **services/audio/**: Text-to-speech and speech recognition (Azure, Ali, Tencent, ChatTTS, GPT-SoVITS, CosyVoice, FishAudio)
 - **services/llm/**: Large language model integrations (OpenAI, Azure, Kimi, Qianfan, Baichuan, Tongyi, DeepSeek, Ollama)
 - **services/video/**: Video processing, merging, and generation
 - **services/resource/**: External resource providers (Pexels, Pixabay, Stable Diffusion)
 - **services/publisher/**: Platform-specific video publishing automation
 - **services/captioning/**: Subtitle generation and processing
+- **services/hunjian/**: Complete audio mode functionality for pre-recorded MP3 files
 
 ### Configuration System
 - Uses YAML configuration files in `config/`
 - `config.example.yml` provides template configuration
 - Configuration is loaded and managed through `config/config.py`
 - Supports various providers for each service type
+- Session state automatically saved to `config/session.yml`
 
 ### Video Generation Pipeline
 1. **Content Generation**: LLM generates video script from topic/keywords
-2. **Audio Processing**: Text-to-speech conversion with voice selection
+2. **Audio Processing**: Text-to-speech conversion with voice selection OR complete audio mode with pre-recorded MP3
 3. **Resource Acquisition**: Fetch relevant video clips from external sources
 4. **Video Assembly**: Combine audio, video clips, transitions, and effects
-5. **Subtitle Generation**: Optional automated subtitle creation
-6. **Final Output**: Produce finished video file
+5. **Subtitle Generation**: Optional automated subtitle creation (disabled in complete audio mode)
+6. **Final Output**: Produce finished video file with date-based naming (YYYY-MM-DD_NN.mp4)
+
+### Video Deduplication System
+The project includes advanced video deduplication functionality for TikTok anti-detection:
+- **Mirror flipping**: 50% probability horizontal flip using FFmpeg `hflip`
+- **Zoom cropping**: Random 1.05x-1.15x scaling with 5% crop offset
+- **Brightness adjustment**: 2%-5% modification to change MD5 hash
+- **All processing in single FFmpeg call** for optimal performance
+- **Maintains silent output** (no audio tracks)
 
 ### Publishing Automation
 Uses Selenium WebDriver to automate video uploads to social media platforms. Requires browser setup with debug mode enabled (Chrome port 9222 or Firefox port 2828).
 
 ## Key Features
-- Multi-language support with internationalization
+- Multi-language support with internationalization (`locales/`)
 - 100+ voice options across different TTS providers
 - 30+ video transition effects
 - Local and cloud-based AI model support
 - Batch video generation and mixing
 - Automated social media publishing
 - Multiple video resolutions and aspect ratios
+- Complete audio mode for using pre-recorded MP3 files
+- Advanced video deduplication for platform anti-detection
+- Video usage tracking system with statistics
 
 ## File Organization
 - **work/**: Audio and video output directory
@@ -95,31 +125,14 @@ Uses Selenium WebDriver to automate video uploads to social media platforms. Req
 - **bgmusic/**: Background music files
 - **fonts/**: Font files for subtitles
 - **locales/**: Translation files for i18n
+- **phrases/**: Text overlay phrases for fancy text service
 - **chattts/**, **fasterwhisper/**, **sensevoice/**: Local AI model directories
-
-## Testing and Development
 
 ### Video File Naming System
 Videos are automatically named using date-based format:
 - Regular videos: `2025-08-16_01.mp4`, `2025-08-16_02.mp4`
 - Merge videos: `merge_2025-08-16_01.mp4`
 - System auto-increments sequence numbers to prevent conflicts
-
-### Testing Commands
-```bash
-# Test video naming functionality
-python -c "from tools.video_naming_utils import *; print(generate_daily_video_filename('final'))"
-
-# Test fancy text service
-python -c "from services.video.fancy_text_service import FancyTextService; service=FancyTextService(); print('Service loaded:', service.config is not None)"
-
-# Validate configuration
-python -c "from config.config import my_config; print('Config loaded:', my_config is not None)"
-
-# Using virtual environment directly (Windows)
-venv/Scripts/python.exe -c "from tools.video_naming_utils import *; print(generate_daily_video_filename('final'))"
-venv/Scripts/python.exe -c "from services.video.fancy_text_service import FancyTextService; service=FancyTextService(); print('Service loaded:', service.config is not None)"
-```
 
 ## Advanced Features
 
@@ -158,6 +171,7 @@ Each service domain is self-contained with:
 4. **Effects Application**: Transitions, text overlays, background music
 5. **Subtitle Generation**: Optional automated subtitle creation (disabled in complete audio mode)
 6. **Final Assembly**: FFmpeg-based video compilation with date-based naming
+7. **Deduplication Processing**: Optional anti-detection modifications for platform publishing
 
 ### Configuration System
 - **Template**: `config.example.yml` provides all available options
@@ -190,3 +204,4 @@ Each service domain is self-contained with:
 - Video effect system supports custom FFmpeg filters
 - Text overlay system configurable via YAML
 - Publishing automation extensible to new platforms
+- Deduplication system modular for different anti-detection strategies
