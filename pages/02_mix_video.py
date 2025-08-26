@@ -339,36 +339,56 @@ with fancy_text_container:
                        help="在视频中添加短语文本叠加")
         
         with fancy_columns_1[1]:
-            st.slider(label="显示频率（秒）", min_value=2, value=25, max_value=60, step=1,
-                     key="fancy_text_frequency", help="每隔多少秒显示一次文本")
+            st.selectbox(label="显示模式", key="fancy_text_display_mode",
+                        options=["interval", "continuous"],
+                        format_func=lambda x: "间隔显示" if x == "interval" else "全程显示",
+                        index=0,
+                        help="间隔显示：隔几秒显示几秒；全程显示：从头到尾显示")
         
         with fancy_columns_1[2]:
-            st.slider(label="显示时长（秒）", min_value=2, value=4, max_value=8, step=1,
-                     key="fancy_text_duration", help="每次显示文本的持续时间")
+            # 根据显示模式调整控件
+            display_mode = st.session_state.get("fancy_text_display_mode", "interval")
+            if display_mode == "interval":
+                st.slider(label="显示频率（秒）", min_value=2, value=25, max_value=60, step=1,
+                         key="fancy_text_frequency", help="每隔多少秒显示一次文本")
+            else:
+                st.info("全程显示模式下无需设置频率")
         
         with fancy_columns_1[3]:
-            st.selectbox(label="同时显示条数", key="fancy_text_display_count", 
-                        options=[1, 2, 3, 4, 5], index=0,
-                        help="选择每次同时显示的短语数量，最多5条")
+            if display_mode == "interval":
+                st.slider(label="显示时长（秒）", min_value=2, value=4, max_value=8, step=1,
+                         key="fancy_text_duration", help="每次显示文本的持续时间")
+            else:
+                st.info("全程显示模式下从头显示到尾")
         
         # 第二行：样式控制（仅在启用时显示）
         if st.session_state.get("enable_fancy_text", False):
             fancy_columns_2 = st.columns(4)
+            
+            display_mode = st.session_state.get("fancy_text_display_mode", "interval")
+            
             with fancy_columns_2[0]:
+                if display_mode == "interval":
+                    st.selectbox(label="同时显示条数", key="fancy_text_display_count", 
+                                options=[1, 2, 3, 4, 5], index=0,
+                                help="选择每次同时显示的短语数量，最多5条")
+                else:
+                    st.info("全程显示模式固定显示3个短语")
+            
+            with fancy_columns_2[1]:
                 st.slider(label="字体大小", min_value=40, value=70, max_value=100, step=5,
                          key="fancy_text_font_size", help="短语文本的字体大小（像素）")
             
-            with fancy_columns_2[1]:
+            with fancy_columns_2[2]:
                 st.slider(label="行间距", min_value=30, value=50, max_value=80, step=5,
                          key="fancy_text_line_spacing", help="多行短语之间的间距（像素）")
             
-            with fancy_columns_2[2]:
-                st.checkbox(label="随机位置", key="fancy_text_random_position", value=True,
-                           help="启用后文本位置会在预设位置中随机选择")
-            
             with fancy_columns_2[3]:
-                st.checkbox(label="启用动画效果", key="fancy_text_animation", value=True,
-                           help="文本显示时使用淡入淡出等动画效果")
+                if display_mode == "interval":
+                    st.checkbox(label="随机位置", key="fancy_text_random_position", value=True,
+                               help="启用后文本位置会在预设位置中随机选择")
+                else:
+                    st.info("全程显示模式固定位置中上方")
             
             # 第三行：颜色设置
             fancy_columns_3 = st.columns(4)
@@ -377,16 +397,26 @@ with fancy_text_container:
                                help="短语文本的颜色")
             
             with fancy_columns_3[1]:
-                st.color_picker(label="背景颜色", key="fancy_text_bg_color", value="#FFA500",
-                               help="短语背景框的颜色")
+                if display_mode == "interval":
+                    st.color_picker(label="背景颜色", key="fancy_text_bg_color", value="#FFA500",
+                                   help="短语背景框的颜色")
+                else:
+                    st.info("全程显示模式不显示背景")
             
             with fancy_columns_3[2]:
-                st.checkbox(label="启用开头字幕", key="fancy_text_show_at_start", value=True,
-                           help="在视频开头立即显示一次字幕")
+                if display_mode == "interval":
+                    st.checkbox(label="启用开头字幕", key="fancy_text_show_at_start", value=True,
+                               help="在视频开头立即显示一次字幕")
+                else:
+                    st.info("全程显示模式从开头显示到结束")
             
             with fancy_columns_3[3]:
-                st.checkbox(label="启用文本阴影", key="fancy_text_shadow", value=True,
-                           help="为文本添加阴影效果增强可读性")
+                if display_mode == "interval":
+                    st.checkbox(label="启用动画效果", key="fancy_text_animation", value=True,
+                               help="文本显示时使用淡入淡出等动画效果")
+                else:
+                    st.checkbox(label="启用文本阴影", key="fancy_text_shadow", value=True,
+                               help="为文本添加阴影效果增强可读性")
             
             # 短语文件管理区域
             st.markdown("---")

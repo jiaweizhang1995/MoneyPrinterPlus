@@ -5,11 +5,21 @@ fancy_text:
   # 功能开关
   enable: true
   
-  # 显示频率配置
-  frequency: 25  # 每25秒出现一次
-  duration: 4    # 每次显示4秒
-  fade_duration: 0.5  # 淡入淡出时间
-  display_count: 1  # 同时显示的短语数量 (1-5)
+  # 显示模式配置
+  display_mode: "interval"  # interval: 间隔显示, continuous: 全程显示
+  
+  # 间隔显示模式配置
+  interval_mode:
+    frequency: 25  # 每25秒出现一次
+    duration: 4    # 每次显示4秒
+    fade_duration: 0.5  # 淡入淡出时间
+    display_count: 1  # 同时显示的短语数量 (1-5)
+  
+  # 全程显示模式配置  
+  continuous_mode:
+    display_count: 3  # 固定显示3个短语
+    fade_duration: 0  # 无淡入淡出效果
+    position: "top_center_high"  # 固定使用中上方位置
   
   # 默认短语列表
   default_phrases:
@@ -54,6 +64,9 @@ fancy_text:
     top_center:
       y: 120
       x: "center"
+    top_center_high:
+      y: 80
+      x: "center"
     top_left:
       y: 120
       x: 80
@@ -70,9 +83,10 @@ fancy_text:
     random_position: true
     position_weights:
       top_center: 40
+      top_center_high: 20
       top_left: 20
-      center: 30
-      bottom_center: 10
+      center: 15
+      bottom_center: 5
     
     # 样式变化
     random_colors: false   # 是否随机颜色

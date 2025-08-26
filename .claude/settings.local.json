@@ -12,7 +12,10 @@
       "Bash(PYTHONPATH=. venv/Scripts/python.exe -m py_compile gui.py)",
       "Bash(git commit:*)",
       "Bash(git pull:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(cat:*)",
+      "Bash(dir:*)"
     ],
     "deny": []
   }

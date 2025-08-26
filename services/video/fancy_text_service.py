@@ -67,9 +67,18 @@ class FancyTextService:
         """获取默认配置"""
         return {
             "enable": True,
-            "frequency": 30,
-            "duration": 4,
-            "display_count": 1,
+            "display_mode": "interval",
+            "interval_mode": {
+                "frequency": 30,
+                "duration": 4,
+                "display_count": 1,
+                "fade_duration": 0.5
+            },
+            "continuous_mode": {
+                "display_count": 3,
+                "fade_duration": 0,
+                "position": "top_center_high"
+            },
             "default_phrases": [
                 "Deep Moisturizing Care",
                 "Natural Organic Formula", 
@@ -111,15 +120,43 @@ class FancyTextService:
         try:
             # 从session_state获取UI配置值并覆盖默认配置
             
-            # 基础显示设置
-            if 'fancy_text_frequency' in st.session_state:
-                self.config['frequency'] = st.session_state.get('fancy_text_frequency', 25)
+            # 显示模式设置
+            if 'fancy_text_display_mode' in st.session_state:
+                self.config['display_mode'] = st.session_state.get('fancy_text_display_mode', 'interval')
             
-            if 'fancy_text_duration' in st.session_state:
-                self.config['duration'] = st.session_state.get('fancy_text_duration', 4)
+            # 根据显示模式合并对应的配置
+            display_mode = self.config.get('display_mode', 'interval')
             
-            if 'fancy_text_display_count' in st.session_state:
-                self.config['display_count'] = st.session_state.get('fancy_text_display_count', 1)
+            if display_mode == 'interval':
+                # 间隔显示模式的配置
+                interval_config = self.config.setdefault('interval_mode', {})
+                
+                if 'fancy_text_frequency' in st.session_state:
+                    interval_config['frequency'] = st.session_state.get('fancy_text_frequency', 25)
+                
+                if 'fancy_text_duration' in st.session_state:
+                    interval_config['duration'] = st.session_state.get('fancy_text_duration', 4)
+                
+                if 'fancy_text_display_count' in st.session_state:
+                    interval_config['display_count'] = st.session_state.get('fancy_text_display_count', 1)
+                    
+                # 为了兼容性，也将值设置到根级别配置
+                self.config['frequency'] = interval_config.get('frequency', 25)
+                self.config['duration'] = interval_config.get('duration', 4)
+                self.config['display_count'] = interval_config.get('display_count', 1)
+                
+            elif display_mode == 'continuous':
+                # 全程显示模式的配置
+                continuous_config = self.config.setdefault('continuous_mode', {})
+                
+                # 固定显示3个短语
+                continuous_config['display_count'] = 3
+                continuous_config['fade_duration'] = 0
+                continuous_config['position'] = 'top_center_high'
+                
+                # 为了兼容性，也将值设置到根级别配置  
+                self.config['display_count'] = 3
+                self.config['fade_duration'] = 0
             
             # 位置设置
             if 'fancy_text_random_position' in st.session_state:
@@ -157,7 +194,7 @@ class FancyTextService:
                 if not animation_enabled:
                     self.config['fade_duration'] = 0
             
-            print(f"UI配置合并完成，频率: {self.config.get('frequency')}秒，时长: {self.config.get('duration')}秒，显示条数: {self.config.get('display_count')}")
+            print(f"UI配置合并完成，显示模式: {self.config.get('display_mode')}，频率: {self.config.get('frequency', 'N/A')}秒，时长: {self.config.get('duration', 'N/A')}秒，显示条数: {self.config.get('display_count')}")
             
         except Exception as e:
             print(f"合并UI配置时发生错误: {e}")
@@ -165,6 +202,14 @@ class FancyTextService:
     def is_enabled(self) -> bool:
         """检查花式文本功能是否启用"""
         return self.config.get('enable', False) and st.session_state.get('enable_fancy_text', False)
+    
+    def get_display_mode(self) -> str:
+        """获取当前的显示模式"""
+        return self.config.get('display_mode', 'interval')
+    
+    def is_continuous_mode(self) -> bool:
+        """判断是否为全程显示模式"""
+        return self.get_display_mode() == 'continuous'
     
     def should_show_text(self, current_time: float, video_duration: float) -> bool:
         """判断在当前时间点是否应该显示文本"""
@@ -211,7 +256,13 @@ class FancyTextService:
         if not all_phrases:
             return ["No phrases available"]
         
-        display_count = self.config.get('display_count', 1)
+        if self.is_continuous_mode():
+            # 全程显示模式：固定显示3个短语
+            display_count = 3
+        else:
+            # 间隔显示模式：使用配置的数量
+            display_count = self.config.get('display_count', 1)
+        
         display_count = min(display_count, len(all_phrases), 5)  # 最多5条
         
         # 随机选择短语
@@ -223,20 +274,30 @@ class FancyTextService:
         phrase_style = self.config.get('phrase_style', {})
         position_config = phrase_style.get('position', {})
         
-        # 获取显示规则配置
-        display_rules = self.config.get('display_rules', {})
-        use_random_position = display_rules.get('random_position', True)
-        
-        if use_random_position and selected_position_preset:
-            # 使用位置预设
+        # 全程显示模式下固定使用中上方位置
+        if self.is_continuous_mode():
+            continuous_config = self.config.get('continuous_mode', {})
+            fixed_position = continuous_config.get('position', 'top_center_high')
             position_presets = self.config.get('position_presets', {})
-            preset = position_presets.get(selected_position_preset, {})
+            preset = position_presets.get(fixed_position, {'x': 'center', 'y': 80})
             x_pos = preset.get('x', 'center')
-            y_pos = preset.get('y', 'center')
+            y_pos = preset.get('y', 80)
         else:
-            # 使用样式配置中的固定位置
-            x_pos = position_config.get('x', 'center')
-            y_pos = position_config.get('y', 'center')
+            # 间隔显示模式使用原有逻辑
+            # 获取显示规则配置
+            display_rules = self.config.get('display_rules', {})
+            use_random_position = display_rules.get('random_position', True)
+            
+            if use_random_position and selected_position_preset:
+                # 使用位置预设
+                position_presets = self.config.get('position_presets', {})
+                preset = position_presets.get(selected_position_preset, {})
+                x_pos = preset.get('x', 'center')
+                y_pos = preset.get('y', 'center')
+            else:
+                # 使用样式配置中的固定位置
+                x_pos = position_config.get('x', 'center')
+                y_pos = position_config.get('y', 'center')
         
         # 如果是多行显示，调整起始Y位置以确保居中
         if phrase_count > 1:
@@ -422,7 +483,8 @@ class FancyTextService:
         
         # 背景框效果
         background_config = phrase_style.get('background', {})
-        if background_config.get('enable', False):
+        # 全程显示模式下不显示背景框
+        if background_config.get('enable', False) and not self.is_continuous_mode():
             bg_color = background_config.get('color', 'orange')
             bg_padding = background_config.get('padding', 15)
             drawtext_params.extend([
@@ -438,23 +500,28 @@ class FancyTextService:
         if not self.is_enabled():
             return []
         
-        frequency = self.config.get('frequency', 30)
-        duration = self.config.get('duration', 4)
-        show_at_start = self.config.get('show_at_start', True)
-        
-        intervals = []
-        
-        # 如果启用开头字幕，在开始时显示
-        if show_at_start and video_duration >= duration:
-            intervals.append((0, duration))
-        
-        # 按频率添加后续显示区间
-        current_time = frequency
-        while current_time + duration <= video_duration:
-            intervals.append((current_time, current_time + duration))
-            current_time += frequency
-        
-        return intervals
+        if self.is_continuous_mode():
+            # 全程显示模式：从头到尾全程显示
+            return [(0, video_duration)]
+        else:
+            # 间隔显示模式：使用原有逻辑
+            frequency = self.config.get('frequency', 30)
+            duration = self.config.get('duration', 4)
+            show_at_start = self.config.get('show_at_start', True)
+            
+            intervals = []
+            
+            # 如果启用开头字幕，在开始时显示
+            if show_at_start and video_duration >= duration:
+                intervals.append((0, duration))
+            
+            # 按频率添加后续显示区间
+            current_time = frequency
+            while current_time + duration <= video_duration:
+                intervals.append((current_time, current_time + duration))
+                current_time += frequency
+            
+            return intervals
     
     def generate_complete_filter_complex(self, video_duration: float, 
                                        video_width: int, video_height: int) -> str:
@@ -468,9 +535,11 @@ class FancyTextService:
         
         all_filters = []
         
-        for start_time, end_time in intervals:
+        if self.is_continuous_mode():
+            # 全程显示模式：只生成一次短语选择，全程使用
+            start_time, end_time = intervals[0]  # 只有一个区间：(0, video_duration)
             duration = end_time - start_time
-            phrases = self.get_display_phrases()
+            phrases = self.get_display_phrases()  # 一次性选择短语
             
             filter_text = self.generate_drawtext_filter(
                 phrases, video_width, video_height,
@@ -479,6 +548,19 @@ class FancyTextService:
             
             if filter_text:
                 all_filters.append(filter_text)
+        else:
+            # 间隔显示模式：每个区间重新选择短语
+            for start_time, end_time in intervals:
+                duration = end_time - start_time
+                phrases = self.get_display_phrases()
+                
+                filter_text = self.generate_drawtext_filter(
+                    phrases, video_width, video_height,
+                    start_time, duration
+                )
+                
+                if filter_text:
+                    all_filters.append(filter_text)
         
         return ','.join(all_filters) if all_filters else ""
     
