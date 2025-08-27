@@ -1,0 +1,40 @@
+audio:
+  provider: Tencent
+llm:
+  Tongyi:
+    api_key: sk-b0f171b6c1a649edb163cc8e42f10e08
+    model_name: qwen3-235b-a22b-instruct-2507
+  provider: Tongyi
+ui:
+  language: zh-CN
+video_mix:
+  bg_music:
+    dir: ''
+    enable: false
+    file: ''
+    volume: 0.3
+  full_audio_dir: E:/Downloads/办公室-自拍素材/bgm
+  output:
+    dir: E:/Downloads/办公室-自拍素材/final
+    videos_count: 1
+  scenes:
+  - resource_dir: E:/Downloads/办公室-自拍素材/first
+  - resource_dir: E:/Downloads/办公室-自拍素材/second
+  subtitles:
+    enable: false
+    font: Songti SC Light
+    lines: 1
+    position: 底部居中
+    size: 8
+  transition_effects:
+    duration: 1
+    effect: fade
+    enable: false
+    type: random
+  use_full_audio: true
+  video_config:
+    fps: 25
+    layout: portrait
+    max_segment_length: 7
+    min_segment_length: 5
+    size: 360x720

@@ -12,6 +12,8 @@ MoneyPrinterPlus is a Python-based AI video generation and publishing tool that 
 
 The application is built using Streamlit for the web interface and integrates with various AI services for content generation, voice synthesis, and video processing.
 
+**Note**: A PyQt6 desktop version is available in the `MoneyPrinterPlus_Qt/` directory, providing a modern GUI alternative to the Streamlit web interface.
+
 ## Development Commands
 
 ### Setup and Installation
@@ -39,6 +41,14 @@ streamlit run gui.py
 
 # Using virtual environment directly (Windows)
 venv/Scripts/python.exe -m streamlit run gui.py
+
+# PyQt6 Desktop Version (Modern GUI)
+start_qt.bat        # Windows
+bash start_qt.sh    # Mac/Linux
+
+# Or manually:
+cd MoneyPrinterPlus_Qt
+python main.py
 ```
 
 ### Testing Commands
