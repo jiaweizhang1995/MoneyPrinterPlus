@@ -216,54 +216,82 @@ class MixVideoPage(QWidget):
         layout.addWidget(group)
     
     def create_subtitle_group(self, layout):
-        """创建字幕配置组"""
-        group = QGroupBox("📝 " + tr("Subtitle Configuration"))
-        group_layout = QGridLayout(group)
+        """创建固定字幕配置组"""
+        group = QGroupBox("📝 " + tr("Fixed Subtitle Configuration"))
+        group_layout = QVBoxLayout(group)
         
-        # 启用字幕（完整音频模式下禁用）
-        self.enable_subtitles_cb = QCheckBox(tr("Enable subtitles"))
-        self.enable_subtitles_cb.setChecked(False)  # 完整音频模式默认关闭字幕
-        self.enable_subtitles_cb.setEnabled(False)  # 完整音频模式下禁用
-        group_layout.addWidget(self.enable_subtitles_cb, 0, 0, 1, 2)
+        # 启用固定字幕
+        self.enable_fixed_subtitles_cb = QCheckBox(tr("Enable fixed subtitles"))
+        self.enable_fixed_subtitles_cb.setChecked(False)
+        self.enable_fixed_subtitles_cb.setToolTip(tr("Load txt file and display subtitles from start to end"))
+        group_layout.addWidget(self.enable_fixed_subtitles_cb)
         
-        # 字幕字体
-        group_layout.addWidget(QLabel(tr("Subtitle font:")), 1, 0)
+        # 字幕文件选择
+        subtitle_file_layout = QHBoxLayout()
+        subtitle_file_layout.addWidget(QLabel(tr("Subtitle file:")))
+        
+        self.subtitle_file_edit = QLineEdit()
+        self.subtitle_file_edit.setPlaceholderText(tr("Select txt subtitle file"))
+        self.subtitle_file_edit.setToolTip(tr("UTF-8 encoded txt file, max 3 lines will be displayed"))
+        subtitle_file_layout.addWidget(self.subtitle_file_edit, 1)
+        
+        self.subtitle_file_browse_btn = QPushButton(tr("Browse"))
+        self.subtitle_file_browse_btn.clicked.connect(self.browse_subtitle_file)
+        subtitle_file_layout.addWidget(self.subtitle_file_browse_btn)
+        
+        group_layout.addLayout(subtitle_file_layout)
+        
+        # 字幕样式配置
+        style_layout = QGridLayout()
+        
+        # 字体
+        style_layout.addWidget(QLabel(tr("Font:")), 0, 0)
         self.subtitle_font_combo = QComboBox()
-        fonts = ["Songti SC Bold", "Songti SC Black", "Songti SC Light", "STSong", 
-                "PingFang SC Regular", "PingFang SC Medium", "PingFang SC Semibold"]
+        fonts = ["Arial", "Arial Bold", "Times New Roman", "Helvetica", "Verdana", "Calibri"]
         self.subtitle_font_combo.addItems(fonts)
-        group_layout.addWidget(self.subtitle_font_combo, 1, 1)
+        style_layout.addWidget(self.subtitle_font_combo, 0, 1)
         
-        # 字幕大小
-        group_layout.addWidget(QLabel(tr("Font size:")), 1, 2)
-        self.subtitle_size_combo = QComboBox()
-        sizes = ["4", "6", "8", "10", "12", "14", "16", "18", "20", "22", "24"]
-        self.subtitle_size_combo.addItems(sizes)
-        self.subtitle_size_combo.setCurrentIndex(2)  # 默认选择8
-        group_layout.addWidget(self.subtitle_size_combo, 1, 3)
+        # 字体大小
+        style_layout.addWidget(QLabel(tr("Font size:")), 0, 2)
+        self.subtitle_size_spin = QSpinBox()
+        self.subtitle_size_spin.setMinimum(20)
+        self.subtitle_size_spin.setMaximum(100)
+        self.subtitle_size_spin.setValue(48)
+        self.subtitle_size_spin.setSuffix("px")
+        style_layout.addWidget(self.subtitle_size_spin, 0, 3)
         
-        # 字幕行数
-        group_layout.addWidget(QLabel(tr("Subtitle lines:")), 2, 0)
-        self.subtitle_lines_combo = QComboBox()
-        self.subtitle_lines_combo.addItems(["1", "2"])
-        self.subtitle_lines_combo.setCurrentIndex(1)  # 默认2行
-        group_layout.addWidget(self.subtitle_lines_combo, 2, 1)
+        # 字体颜色
+        style_layout.addWidget(QLabel(tr("Font color:")), 1, 0)
+        self.subtitle_color_btn = QPushButton()
+        self.subtitle_color_btn.setStyleSheet("background-color: #FFFFFF; border: 1px solid #ccc;")
+        self.subtitle_color_btn.setText("#FFFFFF")
+        self.subtitle_color_btn.clicked.connect(self.choose_subtitle_color)
+        style_layout.addWidget(self.subtitle_color_btn, 1, 1)
         
-        # 字幕位置
-        group_layout.addWidget(QLabel(tr("Subtitle position:")), 2, 2)
-        self.subtitle_position_combo = QComboBox()
-        positions = [tr("Bottom center"), tr("Top center"), tr("Center"), tr("Bottom left"), tr("Bottom right")]
-        self.subtitle_position_combo.addItems(positions)
-        group_layout.addWidget(self.subtitle_position_combo, 2, 3)
+        # 行间距
+        style_layout.addWidget(QLabel(tr("Line spacing:")), 1, 2)
+        self.subtitle_line_spacing_spin = QSpinBox()
+        self.subtitle_line_spacing_spin.setMinimum(10)
+        self.subtitle_line_spacing_spin.setMaximum(100)
+        self.subtitle_line_spacing_spin.setValue(40)
+        self.subtitle_line_spacing_spin.setSuffix("px")
+        style_layout.addWidget(self.subtitle_line_spacing_spin, 1, 3)
         
-        # 字幕颜色控制将在后续版本添加
+        group_layout.addLayout(style_layout)
         
         # 提示信息
-        subtitle_info = QLabel(tr("ℹ️ Subtitles are automatically disabled in complete audio mode"))
-        subtitle_info.setStyleSheet("color: #666; font-style: italic; margin-top: 10px;")
-        subtitle_info.setWordWrap(True)
-        group_layout.addWidget(subtitle_info, 3, 0, 1, 4)
+        info_layout = QVBoxLayout()
+        info_label = QLabel(tr("💡 Fixed subtitles will be displayed in the upper center of the video (randomly select max 3 lines)"))
+        info_label.setStyleSheet("color: #007acc; font-style: italic; margin: 10px 0px;")
+        info_label.setWordWrap(True)
+        info_layout.addWidget(info_label)
         
+        format_label = QLabel(tr("📄 File format: UTF-8 encoded txt file, system will randomly select up to 3 lines from the file"))
+        format_label.setStyleSheet("color: #666; font-size: 12px; margin: 5px 0px;")
+        format_label.setWordWrap(True)
+        info_layout.addWidget(format_label)
+        
+        group_layout.addLayout(info_layout)
         layout.addWidget(group)
     
     def create_output_config_group(self, layout):
@@ -473,12 +501,12 @@ class MixVideoPage(QWidget):
         self.max_segment_spin.valueChanged.connect(self.save_config)
         
         
-        # 字幕配置变化
-        self.enable_subtitles_cb.toggled.connect(self.save_config)
+        # 固定字幕配置变化
+        self.enable_fixed_subtitles_cb.toggled.connect(self.save_config)
+        self.subtitle_file_edit.textChanged.connect(self.save_config)
         self.subtitle_font_combo.currentTextChanged.connect(self.save_config)
-        self.subtitle_size_combo.currentTextChanged.connect(self.save_config)
-        self.subtitle_lines_combo.currentTextChanged.connect(self.save_config)
-        self.subtitle_position_combo.currentTextChanged.connect(self.save_config)
+        self.subtitle_size_spin.valueChanged.connect(self.save_config)
+        self.subtitle_line_spacing_spin.valueChanged.connect(self.save_config)
         
         # 输出配置变化
         self.output_dir_edit.textChanged.connect(self.save_config)
@@ -507,15 +535,23 @@ class MixVideoPage(QWidget):
             self.max_segment_spin.setValue(video_config.get('max_segment_length', 10))
             
             
-            # 加载字幕配置
-            subtitle_config = config_manager.get_subtitles_config()
-            # 完整音频模式下字幕自动禁用
-            if self.use_full_audio_cb.isChecked():
-                self.enable_subtitles_cb.setChecked(False)
-                self.enable_subtitles_cb.setEnabled(False)
-            else:
-                self.enable_subtitles_cb.setChecked(subtitle_config.get('enable', False))
-                self.enable_subtitles_cb.setEnabled(True)
+            # 加载固定字幕配置
+            fixed_subtitle_config = config_manager.get_fixed_subtitles_config()
+            self.enable_fixed_subtitles_cb.setChecked(fixed_subtitle_config.get('enable', False))
+            self.subtitle_file_edit.setText(fixed_subtitle_config.get('file_path', ''))
+            
+            # 加载字体和样式配置
+            font = fixed_subtitle_config.get('font', 'Arial')
+            if font in [self.subtitle_font_combo.itemText(i) for i in range(self.subtitle_font_combo.count())]:
+                self.subtitle_font_combo.setCurrentText(font)
+            
+            self.subtitle_size_spin.setValue(fixed_subtitle_config.get('font_size', 48))
+            self.subtitle_line_spacing_spin.setValue(fixed_subtitle_config.get('line_spacing', 40))
+            
+            # 设置颜色按钮
+            color = fixed_subtitle_config.get('font_color', '#FFFFFF')
+            self.subtitle_color_btn.setStyleSheet(f"background-color: {color}; border: 1px solid #ccc;")
+            self.subtitle_color_btn.setText(color)
                 
             # 加载输出配置
             output_config = config_manager.get_output_config()
@@ -573,15 +609,16 @@ class MixVideoPage(QWidget):
             config_manager.set_video_config(video_config)
             
             
-            # 保存字幕配置
-            subtitle_config = {
-                'enable': self.enable_subtitles_cb.isChecked(),
+            # 保存固定字幕配置
+            fixed_subtitle_config = {
+                'enable': self.enable_fixed_subtitles_cb.isChecked(),
+                'file_path': self.subtitle_file_edit.text(),
                 'font': self.subtitle_font_combo.currentText(),
-                'size': int(self.subtitle_size_combo.currentText()),
-                'lines': int(self.subtitle_lines_combo.currentText()),
-                'position': self.subtitle_position_combo.currentText()
+                'font_size': self.subtitle_size_spin.value(),
+                'font_color': self.subtitle_color_btn.text(),
+                'line_spacing': self.subtitle_line_spacing_spin.value()
             }
-            config_manager.set_subtitles_config(subtitle_config)
+            config_manager.set_fixed_subtitles_config(fixed_subtitle_config)
             
             # 保存输出配置
             output_config = {
@@ -623,6 +660,35 @@ class MixVideoPage(QWidget):
         if directory:
             edit_widget.setText(directory)
     
+    def browse_subtitle_file(self):
+        """浏览字幕文件"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, tr("Select Subtitle File"), 
+            self.subtitle_file_edit.text(),
+            "Text Files (*.txt);;All Files (*)")
+        if file_path:
+            self.subtitle_file_edit.setText(file_path)
+    
+    def choose_subtitle_color(self):
+        """选择字幕颜色"""
+        from PyQt6.QtWidgets import QColorDialog
+        from PyQt6.QtGui import QColor
+        
+        # 获取当前颜色
+        current_color = self.subtitle_color_btn.text()
+        try:
+            color = QColor(current_color)
+        except:
+            color = QColor("#FFFFFF")
+        
+        # 打开颜色选择对话框
+        new_color = QColorDialog.getColor(color, self, tr("Choose Subtitle Color"))
+        if new_color.isValid():
+            hex_color = new_color.name().upper()
+            self.subtitle_color_btn.setStyleSheet(f"background-color: {hex_color}; border: 1px solid #ccc;")
+            self.subtitle_color_btn.setText(hex_color)
+            self.save_config()
+    
     def add_scene(self):
         """添加场景"""
         if len(self.scene_widgets) < 4:  # 最多4个场景
@@ -645,10 +711,8 @@ class MixVideoPage(QWidget):
     
     def on_full_audio_toggled(self, checked):
         """完整音频选项切换"""
-        # 完整音频模式下禁用字幕
-        self.enable_subtitles_cb.setEnabled(not checked)
-        if checked:
-            self.enable_subtitles_cb.setChecked(False)
+        # 固定字幕不受完整音频模式影响，可以独立启用
+        pass
     
     def update_video_size_options(self):
         """更新视频分辨率选项"""

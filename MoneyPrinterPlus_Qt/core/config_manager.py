@@ -69,15 +69,13 @@ class ConfigManager:
                         'min_segment_length': 5,
                         'max_segment_length': 10
                     },
-                    'subtitles': {
+                    'fixed_subtitles': {
                         'enable': False,
-                        'font': 'Songti SC Bold',
-                        'size': 8,
-                        'lines': 2,
-                        'position': 'bottom_center',
-                        'color': '#FFFFFF',
-                        'border_color': '#000000',
-                        'border_width': 0
+                        'file_path': '',
+                        'font': 'Arial',
+                        'font_size': 48,
+                        'font_color': '#FFFFFF',
+                        'line_spacing': 40
                     },
                     'output': {
                         'dir': '',
@@ -211,25 +209,23 @@ class ConfigManager:
         self.config['video_mix']['video_config'] = config
         self.save_config()
     
-    def get_subtitles_config(self) -> Dict[str, Any]:
-        """获取字幕配置"""
+    def get_fixed_subtitles_config(self) -> Dict[str, Any]:
+        """获取固定字幕配置"""
         video_mix = self.get_video_mix_config()
-        return video_mix.get('subtitles', {
+        return video_mix.get('fixed_subtitles', {
             'enable': False,
-            'font': 'Songti SC Bold',
-            'size': 8,
-            'lines': 2,
-            'position': 'bottom_center',
-            'color': '#FFFFFF',
-            'border_color': '#000000',
-            'border_width': 0
+            'file_path': '',
+            'font': 'Arial',
+            'font_size': 48,
+            'font_color': '#FFFFFF',
+            'line_spacing': 40
         })
     
-    def set_subtitles_config(self, config: Dict[str, Any]):
-        """设置字幕配置"""
+    def set_fixed_subtitles_config(self, config: Dict[str, Any]):
+        """设置固定字幕配置"""
         if 'video_mix' not in self.config:
             self.config['video_mix'] = {}
-        self.config['video_mix']['subtitles'] = config
+        self.config['video_mix']['fixed_subtitles'] = config
         self.save_config()
     
     def get_output_config(self) -> Dict[str, Any]:

@@ -218,16 +218,14 @@ class VideoMixWorker(QThread):
                     output_file
                 ]
                 
-                print(f"\u6267\u884cFFmpeg\u547d\u4ee4: {' '.join(cmd)}")
-                result = subprocess.run(cmd, capture_output=True, text=True)
-                
-                if result.returncode == 0:
-                    normalized_videos.append(output_file)
-                    print(f"视频标准化完成: {output_file}")
-                else:
-                    print(f"FFmpeg错误: {result.stderr}")
-                    raise Exception(f"FFmpeg处理失败: {result.stderr}")
+                print(f"执行FFmpeg命令: {' '.join(cmd)}")
+                result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', check=True)
+                normalized_videos.append(output_file)
+                print(f"视频标准化完成: {output_file}")
                     
+            except subprocess.CalledProcessError as e:
+                print(f"FFmpeg处理失败: {e.stderr}")
+                raise Exception(f"FFmpeg处理失败: {e.stderr}")
             except Exception as e:
                 print(f"处理视频 {video_file} 失败: {str(e)}")
                 raise
@@ -235,69 +233,250 @@ class VideoMixWorker(QThread):
         return normalized_videos
     
     def _merge_final_video(self, video_files: List[str], audio_file: Optional[str]) -> str:
-        """合成最终视频"""
+        """合成最终视频 - 采用原项目的两步法：先合并视频，再添加音频"""
         output_file = self._generate_output_filename()
         work_dir = self._get_work_dir()
         
         try:
-            # 创建文件列表
+            # 步骤1: 合并视频（不带音频），参考原项目的实现方式
+            temp_video_file = os.path.join(work_dir, f"temp_merged_{int(time.time())}.mp4")
             filelist_path = os.path.join(work_dir, f"filelist_{int(time.time())}.txt")
+            
             with open(filelist_path, 'w', encoding='utf-8') as f:
                 for video_file in video_files:
-                    # 使用相对路径或者转义反斜杠
                     escaped_path = video_file.replace('\\', '/')
                     f.write(f"file '{escaped_path}'\n")
             
-            if audio_file:
-                # 带音频的合成
-                cmd = [
+            # 检查是否需要添加固定字幕
+            subtitle_filters = self._generate_subtitle_filters()
+            
+            # 先合并视频（无音频）
+            if subtitle_filters:
+                # 带字幕的视频合并
+                video_merge_cmd = [
                     'ffmpeg',
                     '-f', 'concat',
-                    '-safe', '0', 
+                    '-safe', '0',
                     '-i', filelist_path,
-                    '-i', audio_file,
-                    '-c:v', 'copy',
-                    '-c:a', 'aac',
-                    '-shortest',  # 使用最短的流的长度
+                    '-vf', subtitle_filters,
+                    '-c:v', 'libx264',
+                    '-fflags', '+genpts',  # 参考原项目的参数
                     '-y',
-                    output_file
+                    temp_video_file
                 ]
             else:
-                # 仅合成视频
-                cmd = [
+                # 无字幕的视频合并（参考原项目）
+                video_merge_cmd = [
                     'ffmpeg',
                     '-f', 'concat',
                     '-safe', '0',
                     '-i', filelist_path,
                     '-c', 'copy',
+                    '-fflags', '+genpts',  # 参考原项目的参数
+                    '-y',
+                    temp_video_file
+                ]
+            
+            print(f"步骤1 - 合并视频: {' '.join(video_merge_cmd)}")
+            result = subprocess.run(video_merge_cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', check=True)
+            print(f"视频合并完成: {temp_video_file}")
+            
+            # 步骤2: 添加音频（参考原项目的add_music函数）
+            if audio_file:
+                audio_add_cmd = [
+                    'ffmpeg',
+                    '-i', temp_video_file,  # 输入视频文件
+                    '-i', audio_file,       # 输入音频文件
+                    '-c:v', 'copy',         # 复制视频流编码
+                    '-c:a', 'aac',          # 使用AAC编码音频流
+                    '-strict', 'experimental',  # 启用AAC编码
+                    '-map', '0:v:0',        # 选择第一个输入文件的视频流
+                    '-map', '1:a:0',        # 选择第二个输入文件的音频流
+                    '-shortest',            # 使用最短的流的长度
                     '-y',
                     output_file
                 ]
-            
-            print(f"\u6267\u884c\u6700\u7ec8\u5408\u6210\u547d\u4ee4: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True)
-            
-            if result.returncode == 0:
-                print(f"视频合成完成: {output_file}")
                 
-                # 清理临时文件
-                try:
-                    os.remove(filelist_path)
-                    for temp_file in video_files:
-                        if os.path.exists(temp_file) and work_dir in temp_file:
-                            os.remove(temp_file)
-                except:
-                    pass  # 忽略清理错误
+                print(f"步骤2 - 添加音频: {' '.join(audio_add_cmd)}")
+                result = subprocess.run(audio_add_cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', check=True)
+                print(f"音频添加完成: {output_file}")
                 
-                return output_file
+                # 删除临时视频文件
+                if os.path.exists(temp_video_file):
+                    os.remove(temp_video_file)
             else:
-                print(f"FFmpeg合成错误: {result.stderr}")
-                raise Exception(f"FFmpeg合成失败: {result.stderr}")
+                # 无音频时，直接重命名临时文件
+                if os.path.exists(temp_video_file):
+                    os.rename(temp_video_file, output_file)
+                    print(f"无音频视频生成完成: {output_file}")
+            
+            # 清理临时文件
+            try:
+                os.remove(filelist_path)
+                for temp_file in video_files:
+                    if os.path.exists(temp_file) and work_dir in temp_file:
+                        os.remove(temp_file)
+            except:
+                pass  # 忽略清理错误
+            
+            return output_file
                 
+        except subprocess.CalledProcessError as e:
+            print(f"FFmpeg处理错误: {e.stderr}")
+            # 清理可能的临时文件
+            temp_video_file = os.path.join(work_dir, f"temp_merged_{int(time.time())}.mp4")
+            if os.path.exists(temp_video_file):
+                os.remove(temp_video_file)
+            raise Exception(f"FFmpeg处理失败: {e.stderr}")
         except Exception as e:
             print(f"合成视频失败: {str(e)}")
             raise
     
+    def _generate_subtitle_filters(self) -> Optional[str]:
+        """生成固定字幕滤镜，基于原项目FancyTextService的实现方案"""
+        try:
+            # 获取固定字幕配置
+            fixed_subtitles_config = self.config.get('fixed_subtitles', {})
+            if not fixed_subtitles_config.get('enable', False):
+                return None
+                
+            # 获取字幕文件路径
+            subtitle_file = fixed_subtitles_config.get('file_path', '')
+            if not subtitle_file or not os.path.isfile(subtitle_file):
+                return None
+            
+            # 读取字幕内容
+            subtitle_lines = self._read_subtitle_file(subtitle_file)
+            if not subtitle_lines:
+                return None
+            
+            # 基于原项目方案：使用字体文件路径和完整的drawtext参数
+            font_size = fixed_subtitles_config.get('font_size', 48)
+            font_color = fixed_subtitles_config.get('font_color', '#FFFFFF')
+            line_spacing = fixed_subtitles_config.get('line_spacing', 40)
+            
+            # 获取字体文件路径（使用原项目的方法）
+            font_path = self._get_font_path_from_original_project()
+            
+            # 生成drawtext滤镜（参考原项目的方式）
+            drawtext_filters = []
+            
+            # 基础Y位置（中间偏上）
+            base_y = "h*0.2"
+            
+            for i, line in enumerate(subtitle_lines):
+                if not line.strip():
+                    continue
+                
+                # 计算当前行的Y位置
+                if i == 0:
+                    current_y = base_y
+                else:
+                    current_y = f"{base_y}+{i * line_spacing}"
+                
+                # 构造drawtext参数（参考原项目的完整实现）
+                drawtext_params = [
+                    f"fontfile={font_path}" if font_path else "",
+                    f"text='{self._escape_text_for_ffmpeg(line)}'",
+                    f"fontsize={font_size}",
+                    f"fontcolor={font_color}",
+                    "x=(w-text_w)/2",  # 水平居中
+                    f"y={current_y}"
+                ]
+                
+                # 移除空参数
+                drawtext_params = [param for param in drawtext_params if param]
+                
+                drawtext_filter = "drawtext=" + ":".join(drawtext_params)
+                drawtext_filters.append(drawtext_filter)
+            
+            # 组合多个drawtext滤镜
+            return ','.join(drawtext_filters) if drawtext_filters else None
+                
+        except Exception as e:
+            print(f"生成字幕滤镜失败: {str(e)}")
+            return None
+    
+    def _read_subtitle_file(self, file_path: str) -> List[str]:
+        """读取字幕文件，随机选择最多3行"""
+        try:
+            # 尝试多种编码方式
+            encodings = ['utf-8', 'utf-8-sig', 'gbk', 'gb2312']
+            
+            for encoding in encodings:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        lines = f.readlines()
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                # 如果所有编码都失败，使用默认编码并忽略错误
+                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    lines = f.readlines()
+            
+            # 清理换行符并过滤空行
+            all_lines = []
+            for line in lines:
+                clean_line = line.strip()
+                if clean_line:
+                    all_lines.append(clean_line)
+            
+            # 如果文件为空，返回空列表
+            if not all_lines:
+                return []
+            
+            # 随机选择最多3行
+            max_lines = min(3, len(all_lines))
+            selected_lines = random.sample(all_lines, max_lines)
+            
+            return selected_lines
+            
+        except Exception as e:
+            print(f"读取字幕文件失败 {file_path}: {str(e)}")
+            return []
+    
+    def _get_font_path_from_original_project(self) -> Optional[str]:
+        """获取字体文件路径，基于原项目的方法"""
+        try:
+            # 获取项目根目录下的字体目录
+            script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            project_dir = os.path.dirname(script_dir)
+            font_dir = os.path.join(project_dir, "fonts")
+            
+            # 查找可用的字体文件（优先使用PingFang，然后是其他字体）
+            font_files = [
+                "PingFang.ttc",
+                "Songti.ttc", 
+                "STSong.ttf",
+                "Arial.ttf",
+                "arial.ttf"
+            ]
+            
+            for font_file in font_files:
+                font_path = os.path.join(font_dir, font_file)
+                if os.path.isfile(font_path):
+                    # Windows路径处理（参考原项目的处理方式）
+                    if os.name == 'nt':  # Windows系统
+                        font_path = font_path.replace("\\", "\\\\\\\\")
+                        font_path = font_path.replace(":", "\\\\:")
+                    return font_path
+            
+            # 如果没找到字体文件，返回None让FFmpeg使用默认字体
+            return None
+            
+        except Exception as e:
+            print(f"获取字体路径失败: {str(e)}")
+            return None
+    
+    def _escape_text_for_ffmpeg(self, text: str) -> str:
+        """为FFmpeg转义文本中的特殊字符（基于原项目的方法）"""
+        # 基于原项目FancyTextService的转义方式
+        # 只转义必要的字符，避免过度转义
+        text = text.replace("'", r"\'")
+        text = text.replace(":", r"\:")
+        return text
+
     def _get_work_dir(self) -> str:
         """获取工作目录"""
         script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -407,7 +586,7 @@ class VideoMixService(QObject):
             full_audio_config = config_manager.get_full_audio_config()
             scenes_config = config_manager.get_scenes_config()
             video_config = config_manager.get_video_config()
-            subtitle_config = config_manager.get_subtitles_config()
+            fixed_subtitle_config = config_manager.get_fixed_subtitles_config()
             output_config = config_manager.get_output_config()
             
             return {
@@ -415,7 +594,7 @@ class VideoMixService(QObject):
                 'full_audio_dir': full_audio_config.get('full_audio_dir', ''),
                 'scenes': scenes_config,
                 'video_config': video_config,
-                'subtitles': subtitle_config,
+                'fixed_subtitles': fixed_subtitle_config,
                 'output': output_config
             }
             

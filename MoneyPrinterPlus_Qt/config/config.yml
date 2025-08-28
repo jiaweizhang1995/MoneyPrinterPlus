@@ -13,6 +13,13 @@ video_mix:
     enable: false
     file: ''
     volume: 0.3
+  fixed_subtitles:
+    enable: true
+    file_path: E:/PycharmProjects/MoneyPrinterPlus/phrases/default_phrases.txt
+    font: Arial
+    font_color: '#FFFFFF'
+    font_size: 48
+    line_spacing: 40
   full_audio_dir: E:/Downloads/办公室-自拍素材/bgm
   output:
     dir: E:/Downloads/办公室-自拍素材/final
@@ -22,8 +29,8 @@ video_mix:
   - resource_dir: E:/Downloads/办公室-自拍素材/second
   subtitles:
     enable: false
-    font: Songti SC Light
-    lines: 1
+    font: Songti SC Bold
+    lines: 2
     position: 底部居中
     size: 8
   transition_effects:
@@ -35,6 +42,6 @@ video_mix:
   video_config:
     fps: 25
     layout: portrait
-    max_segment_length: 7
+    max_segment_length: 12
     min_segment_length: 5
-    size: 360x720
+    size: 1080x1920

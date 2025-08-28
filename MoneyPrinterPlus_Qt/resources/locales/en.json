@@ -52,5 +52,20 @@
   "with anti-detection processing": "with anti-detection processing",
   "Deduplication failed, trying without anti-detection...": "Deduplication failed, trying without anti-detection...",
   "(without anti-detection)": "(without anti-detection)",
-  "(with anti-detection processing)": "(with anti-detection processing)"
+  "(with anti-detection processing)": "(with anti-detection processing)",
+  
+  "Fixed Subtitle Configuration": "Fixed Subtitle Configuration",
+  "Enable fixed subtitles": "Enable fixed subtitles",
+  "Load txt file and display subtitles from start to end": "Load txt file and display subtitles from start to end",
+  "Subtitle file:": "Subtitle file:",
+  "Select txt subtitle file": "Select txt subtitle file",
+  "UTF-8 encoded txt file, max 3 lines will be displayed": "UTF-8 encoded txt file, max 3 lines will be displayed",
+  "Select Subtitle File": "Select Subtitle File",
+  "Font:": "Font:",
+  "Font size:": "Font size:",
+  "Font color:": "Font color:",
+  "Line spacing:": "Line spacing:",
+  "Choose Subtitle Color": "Choose Subtitle Color",
+  "💡 Fixed subtitles will be displayed in the upper center of the video (randomly select max 3 lines)": "💡 Fixed subtitles will be displayed in the upper center of the video (randomly select max 3 lines)",
+  "📄 File format: UTF-8 encoded txt file, system will randomly select up to 3 lines from the file": "📄 File format: UTF-8 encoded txt file, system will randomly select up to 3 lines from the file"
 }
